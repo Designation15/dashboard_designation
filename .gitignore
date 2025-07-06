@@ -1,0 +1,5 @@
+designation-cle.json
+info.txt
+*.log
+__pycache__/
+.env
