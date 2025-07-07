@@ -12,18 +12,10 @@ SERVICE_ACCOUNT_FILE = 'designation-cle.json'
 # URLs de vos feuilles Google Sheets (utilisez les mêmes que dans vos autres pages)
 # Assurez-vous que ces URLs correspondent aux feuilles que vous voulez mettre à jour
 SHEET_URLS = {
-    "Rencontres-024": "https://docs.google.com/spreadsheets/d/1I8RGfNNdaO1wlrtFgIOFbOnzpKszwJTxdyhQ7rRD1bg/edit",
-    "Disponibilites-022": "https://docs.google.com/spreadsheets/d/16-eSHsURF-H1zWx_a_Tu01E9AtmxjIXocpiR2t2ZNU4/edit",
-    "Arbitres-052": "https://docs.google.com/spreadsheets/d/1bIUxD-GDc4V94nYoI_x2mEk0i_r9Xxnf02_Rn9YtoIc/edit",
-    "Clubs-007": "https://docs.google.com/spreadsheets/d/1GLWS4jOmwv-AOtkFZ5-b5JcjaSpBVlwqcuOCRRmEVPQ/edit",
-}
-
-# Mapping des noms d'onglets pour chaque type de données
-SHEET_TABS = {
-    "Rencontres": "RS_OVALE2-024", # Ou le nom réel de l'onglet de votre feuille de rencontres
-    "Disponibilites": "RS_OVALE2-022",
-    "Arbitres": "RS_OVALE2-052", # Ou le nom réel de l'onglet de votre feuille d'arbitres
-    "Clubs": "RS_OVALE2-007",
+    "Rencontres": "https://docs.google.com/spreadsheets/d/1I8RGfNNdaO1wlrtFgIOFbOnzpKszwJTxdyhQ7rRD1bg/edit",
+    "Disponibilites": "https://docs.google.com/spreadsheets/d/16-eSHsURF-H1zWx_a_Tu01E9AtmxjIXocpiR2t2ZNU4/edit",
+    "Arbitres": "https://docs.google.com/spreadsheets/d/1bIUxD-GDc4V94nYoI_x2mEk0i_r9Xxnf02_Rn9YtoIc/edit",
+    "Clubs": "https://docs.google.com/spreadsheets/d/1GLWS4jOmwv-AOtkFZ5-b5JcjaSpBVlwqcuOCRRmEVPQ/edit",
 }
 
 
@@ -60,9 +52,8 @@ def update_google_sheet(client, sheet_url, df_new, data_type):
         st.write(f"Tentative d'ouverture de la feuille avec l'ID : {sheet_id}")
         spreadsheet = client.open_by_url(sheet_url) # Changement ici : open_by_url au lieu de open_by_key
         
-        # Sélectionner l'onglet correct en fonction du type de données
-        tab_name = SHEET_TABS.get(data_type, "Feuil1") # Par défaut à "Feuil1" si non trouvé
-        worksheet = spreadsheet.worksheet(tab_name)
+        # Sélectionner la première feuille (index 0) du classeur
+        worksheet = spreadsheet.get_worksheet(0)
 
         # Effacer le contenu existant
         worksheet.clear()
