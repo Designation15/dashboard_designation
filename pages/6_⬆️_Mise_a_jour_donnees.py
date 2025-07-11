@@ -16,6 +16,7 @@ SHEET_URLS = {
     "Disponibilites-022": "https://docs.google.com/spreadsheets/d/16-eSHsURF-H1zWx_a_Tu01E9AtmxjIXocpiR2t2ZNU4/edit",
     "Arbitres-052": "https://docs.google.com/spreadsheets/d/1bIUxD-GDc4V94nYoI_x2mEk0i_r9Xxnf02_Rn9YtoIc/edit",
     "Clubs-007": "https://docs.google.com/spreadsheets/d/1GLWS4jOmwv-AOtkFZ5-b5JcjaSpBVlwqcuOCRRmEVPQ/edit",
+    "RencontresFFR": "https://docs.google.com/spreadsheets/d/1ViKipszuqE5LPbTcFk2QvmYq4ZNQZVs9LbzrUVC4p4Y/edit",
 }
 
 
@@ -24,24 +25,24 @@ SHEET_URLS = {
 def get_gspread_client():
     try:
         st.write("Début de la tentative d'authentification gspread.")
-        # Essayer d'utiliser les secrets de Streamlit (pour le déploiement)
-        if "gcp_service_account" in st.secrets:
+        # Priorité au fichier local pour le développement
+        if os.path.exists(SERVICE_ACCOUNT_FILE):
+            st.write("Utilisation du fichier de clé de service local.")
+            creds = Credentials.from_service_account_file(
+                SERVICE_ACCOUNT_FILE,
+                scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+            )
+        # Sinon, essayer d'utiliser les secrets de Streamlit (pour le déploiement)
+        elif "gcp_service_account" in st.secrets:
             st.write("Utilisation des secrets Streamlit pour l'authentification.")
             creds_dict = st.secrets["gcp_service_account"]
             creds = Credentials.from_service_account_info(
                 creds_dict,
                 scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
             )
-        # Sinon, utiliser le fichier local (pour le développement)
-        elif os.path.exists(SERVICE_ACCOUNT_FILE):
-            st.write("Utilisation du fichier de clé de service local.")
-            creds = Credentials.from_service_account_file(
-                SERVICE_ACCOUNT_FILE,
-                scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
-            )
         else:
-            st.error(f"Fichier de clé de service '{SERVICE_ACCOUNT_FILE}' introuvable et les secrets Streamlit ne sont pas configurés.")
-            st.info("Pour le déploiement sur Streamlit Community Cloud, configurez les secrets. Pour le développement local, assurez-vous que le fichier JSON est présent.")
+            st.error("Configuration d'authentification introuvable.")
+            st.info(f"Pour le développement local, assurez-vous que le fichier '{SERVICE_ACCOUNT_FILE}' est présent. Pour le déploiement sur Streamlit, assurez-vous que les secrets 'gcp_service_account' sont correctement configurés.")
             return None
 
         st.write(f"Authentification réussie. Email du compte de service : {creds.service_account_email}")
