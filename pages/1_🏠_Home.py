@@ -31,7 +31,7 @@ def load_data(url):
 
 # --- Application Principale ---
 st.title("🏠 Tableau de Bord Principal")
-st.markdown("Vue d'overview de l'activité et des désignations à venir.")
+st.markdown("L'application est en cours de développement. Il y a des zones de debuq qui seront remplacées.Vue de l'activité et des désignations à venir.")
 
 # Chargement des données
 rencontres_df = load_data(RENCONTRES_URL)

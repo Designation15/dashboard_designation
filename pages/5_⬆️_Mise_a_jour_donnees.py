@@ -12,10 +12,10 @@ SERVICE_ACCOUNT_FILE = 'designation-cle.json'
 # URLs de vos feuilles Google Sheets (utilisez les mêmes que dans vos autres pages)
 # Assurez-vous que ces URLs correspondent aux feuilles que vous voulez mettre à jour
 SHEET_URLS = {
-    "Rencontres": "https://docs.google.com/spreadsheets/d/1I8RGfNNdaO1wlrtFgIOFbOnzpKszwJTxdyhQ7rRD1bg/edit",
-    "Disponibilites": "https://docs.google.com/spreadsheets/d/16-eSHsURF-H1zWx_a_Tu01E9AtmxjIXocpiR2t2ZNU4/edit",
-    "Arbitres": "https://docs.google.com/spreadsheets/d/1bIUxD-GDc4V94nYoI_x2mEk0i_r9Xxnf02_Rn9YtoIc/edit",
-    "Clubs": "https://docs.google.com/spreadsheets/d/1GLWS4jOmwv-AOtkFZ5-b5JcjaSpBVlwqcuOCRRmEVPQ/edit",
+    "Rencontres-024": "https://docs.google.com/spreadsheets/d/1I8RGfNNdaO1wlrtFgIOFbOnzpKszwJTxdyhQ7rRD1bg/edit",
+    "Disponibilites-022": "https://docs.google.com/spreadsheets/d/16-eSHsURF-H1zWx_a_Tu01E9AtmxjIXocpiR2t2ZNU4/edit",
+    "Arbitres-052": "https://docs.google.com/spreadsheets/d/1bIUxD-GDc4V94nYoI_x2mEk0i_r9Xxnf02_Rn9YtoIc/edit",
+    "Clubs-007": "https://docs.google.com/spreadsheets/d/1GLWS4jOmwv-AOtkFZ5-b5JcjaSpBVlwqcuOCRRmEVPQ/edit",
 }
 
 
