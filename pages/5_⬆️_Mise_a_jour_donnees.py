@@ -5,7 +5,7 @@ from google.oauth2.service_account import Credentials
 import json
 import os
 
-# --- Configuration ---
+# --- Configuration ---     
 # Chemin vers votre fichier JSON de compte de service
 SERVICE_ACCOUNT_FILE = 'designation-cle.json' 
 
@@ -24,24 +24,34 @@ SHEET_URLS = {
 def get_gspread_client():
     try:
         st.write("Début de la tentative d'authentification gspread.")
-        # Vérifier si le fichier de clé de service existe
-        if not os.path.exists(SERVICE_ACCOUNT_FILE):
-            st.error(f"Fichier de clé de service '{SERVICE_ACCOUNT_FILE}' introuvable. Assurez-vous qu'il est dans le répertoire racine de votre projet.")
+        # Essayer d'utiliser les secrets de Streamlit (pour le déploiement)
+        if "gcp_service_account" in st.secrets:
+            st.write("Utilisation des secrets Streamlit pour l'authentification.")
+            creds_dict = st.secrets["gcp_service_account"]
+            creds = Credentials.from_service_account_info(
+                creds_dict,
+                scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+            )
+        # Sinon, utiliser le fichier local (pour le développement)
+        elif os.path.exists(SERVICE_ACCOUNT_FILE):
+            st.write("Utilisation du fichier de clé de service local.")
+            creds = Credentials.from_service_account_file(
+                SERVICE_ACCOUNT_FILE,
+                scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
+            )
+        else:
+            st.error(f"Fichier de clé de service '{SERVICE_ACCOUNT_FILE}' introuvable et les secrets Streamlit ne sont pas configurés.")
+            st.info("Pour le déploiement sur Streamlit Community Cloud, configurez les secrets. Pour le développement local, assurez-vous que le fichier JSON est présent.")
             return None
 
-        # Charger les informations d'identification depuis le fichier JSON
-        creds = Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE,
-            scopes=['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
-        )
-        st.write(f"Fichier JSON lu. Email du compte de service : {creds.service_account_email}")
+        st.write(f"Authentification réussie. Email du compte de service : {creds.service_account_email}")
         client = gspread.authorize(creds)
-        st.success("Authentification gspread réussie !")
+        st.success("Connexion à Google Sheets réussie !")
         return client
     except Exception as e:
         st.error(f"Erreur lors de l'authentification avec Google Sheets : {e}")
         st.exception(e) # Affiche la trace complète de l'exception
-        st.info("Vérifiez que votre fichier JSON est valide et que le compte de service a accès aux feuilles.")
+        st.info("Vérifiez la configuration de vos secrets sur Streamlit Cloud ou votre fichier JSON local.")
         return None
 
 # --- Fonction de mise à jour de la feuille Google Sheet ---
