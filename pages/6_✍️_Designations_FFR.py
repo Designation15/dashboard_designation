@@ -77,13 +77,11 @@ if not rencontres_ffr_df.empty:
     st.header("Détails des Désignations")
     
     colonnes_a_afficher = [
-        "COMPETITION NOM",
-        "DATE",
         "LOCAUX",
         "VISITEURS",
-        "FONCTION ARBITRE",
-        "NOM",
+        "Nom",
         "PRENOM",
+        "FONCTION ARBITRE",
         "DPT DE RESIDENCE",
         "TERRAIN CODE POSTAL"
     ]
