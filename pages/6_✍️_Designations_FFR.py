@@ -34,6 +34,7 @@ def load_static_data():
         'NIVEAU MAX': [4, 6, 6, 4, 4, 1, 7, 6, 7, 8, 7, 6, 10, 13, 9, 9, 9, 9, 9, 9, 7, 9, 9, 9, 9, 11]
     }
     competitions_df = pd.DataFrame(competitions_data)
+    competitions_df.rename(columns={'NOM': 'COMPETITION_NAME_FOR_MERGE'}, inplace=True)
     return categories_df, competitions_df
 
 @st.cache_data(ttl=300)
@@ -46,52 +47,62 @@ def load_all_data():
     for df in [rencontres_df, arbitres_df, club_df]:
         df.columns = df.columns.str.strip()
 
-    # 1. Merge avec les données des arbitres pour obtenir leur catégorie
-    merged_df = pd.merge(rencontres_df, arbitres_df[['Numéro Affiliation', 'Catégorie']], left_on='NUMERO LICENCE', right_on='Numéro Affiliation', how='left')
-    
-    # 2. Merge avec les catégories pour obtenir le NIVEAU de l'arbitre
+    if 'CP' in club_df.columns:
+        club_df['DPT_from_CP'] = club_df['CP'].astype(str).str.zfill(5).str[:2]
+    else:
+        club_df['DPT_from_CP'] = pd.NA
+
+    if 'NOM' in rencontres_df.columns and 'Nom' not in rencontres_df.columns:
+        rencontres_df.rename(columns={'NOM': 'Nom'}, inplace=True)
+
+    # --- Robust Merge Logic ---
+    arbitres_cols_to_merge = ['Numéro Affiliation', 'Catégorie', 'DPT DE RESIDENCE']
+    existing_arbitres_cols = [col for col in arbitres_cols_to_merge if col in arbitres_df.columns]
+    merged_df = pd.merge(rencontres_df, arbitres_df[existing_arbitres_cols], left_on='NUMERO LICENCE', right_on='Numéro Affiliation', how='left')
+    # --- End Robust Merge ---
+
     merged_df = pd.merge(merged_df, categories_df, left_on='Catégorie', right_on='CATEGORIE', how='left')
+    merged_df = pd.merge(merged_df, competitions_df, left_on='COMPETITION NOM', right_on='COMPETITION_NAME_FOR_MERGE', how='left')
 
-    # 3. Merge avec les compétitions pour obtenir les NIVEAUX MIN/MAX requis
-    merged_df = pd.merge(merged_df, competitions_df, left_on='COMPETITION NOM', right_on='NOM', how='left')
-
-    # 4. Merge avec les clubs pour obtenir le DPT des locaux
-    merged_df['LOCAUX_CODE'] = merged_df['LOCAUX'].str.extract(r'\((\d+)\)').fillna('0').astype(str)
-    club_df['Code'] = club_df['Code'].astype(str)
-    merged_df = pd.merge(merged_df, club_df[['Code', 'CP']], left_on='LOCAUX_CODE', right_on='Code', how='left')
-    merged_df.rename(columns={'CP': 'DPT_LOCAUX'}, inplace=True)
+    if 'LOCAUX' in merged_df.columns and 'Code' in club_df.columns:
+        merged_df['LOCAUX_CODE'] = merged_df['LOCAUX'].str.extract(r'\((.*?)\)').fillna('0').astype(str)
+        club_df['Code'] = club_df['Code'].astype(str)
+        merged_df = pd.merge(merged_df, club_df[['Code', 'DPT_from_CP', 'CP']], left_on='LOCAUX_CODE', right_on='Code', how='left')
+        merged_df.rename(columns={'DPT_from_CP': 'DPT_LOCAUX', 'CP': 'CP_LOCAUX'}, inplace=True)
+    
+    if 'DPT_LOCAUX' not in merged_df.columns: merged_df['DPT_LOCAUX'] = pd.NA
+    if 'CP_LOCAUX' not in merged_df.columns: merged_df['CP_LOCAUX'] = pd.NA
+    
+    final_numeric_cols = ['Niveau', 'NIVEAU MIN', 'NIVEAU MAX', 'DPT DE RESIDENCE', 'DPT_LOCAUX', 'CP_LOCAUX']
+    for col in final_numeric_cols:
+        if col in merged_df.columns:
+            merged_df[col] = pd.to_numeric(merged_df[col], errors='coerce')
 
     return merged_df
 
 # --- Fonctions de vérification ---
 def check_neutrality(row):
-    if row["FONCTION ARBITRE"] == "Arbitre de champ":
+    dpt_locaux = row.get("DPT_LOCAUX")
+    dpt_residence = row.get("DPT DE RESIDENCE")
+    if row.get("FONCTION ARBITRE") == "Arbitre de champ" and pd.notna(dpt_residence) and pd.notna(dpt_locaux):
         try:
-            # Convertir en int pour une comparaison fiable (gère "75" et 75.0)
-            dpt_residence = int(float(row["DPT DE RESIDENCE"]))
-            dpt_locaux = int(float(row["DPT_LOCAUX"]))
-            if dpt_residence == dpt_locaux:
+            if int(dpt_residence) == int(dpt_locaux):
                 return "⚠️ Neutralité"
         except (ValueError, TypeError):
-            # Ignorer si la conversion échoue (valeurs non numériques)
             pass
     return ""
 
 def check_competence(row):
-    if row["FONCTION ARBITRE"] == "Arbitre de champ":
+    if row.get("FONCTION ARBITRE") == "Arbitre de champ":
         try:
-            # Convertir tous les niveaux en int pour la comparaison
-            niveau = int(float(row['Niveau']))
-            niveau_min = int(float(row['NIVEAU MIN']))
-            niveau_max = int(float(row['NIVEAU MAX']))
-
+            niveau = int(row.get('Niveau'))
+            niveau_min = int(row.get('NIVEAU MIN'))
+            niveau_max = int(row.get('NIVEAU MAX'))
             borne_inf = min(niveau_min, niveau_max)
             borne_sup = max(niveau_min, niveau_max)
-            
             if not (borne_inf <= niveau <= borne_sup):
                 return "❌ Compétence"
         except (ValueError, TypeError):
-            # Ignorer si la conversion échoue (données manquantes ou non numériques)
             pass
     return ""
 
@@ -122,7 +133,7 @@ if not data_df.empty:
         search_mask = (
             filtered_df["LOCAUX"].str.contains(search_term, case=False, na=False) |
             filtered_df["VISITEURS"].str.contains(search_term, case=False, na=False) |
-            filtered_df["NOM_x"].str.contains(search_term, case=False, na=False) | # NOM_x from merge
+            filtered_df["Nom"].str.contains(search_term, case=False, na=False) | 
             filtered_df["PRENOM"].str.contains(search_term, case=False, na=False)
         )
         filtered_df = filtered_df[search_mask]
@@ -145,21 +156,24 @@ if not data_df.empty:
 
     st.header("Détails des Désignations")
     colonnes_a_afficher = [
-        "Statut", "COMPETITION NOM", "LOCAUX", "VISITEURS", "Nom", "PRENOM",
-        "FONCTION ARBITRE", "DPT DE RESIDENCE", "Catégorie", "Niveau", "NIVEAU MIN", "NIVEAU MAX"
+        "Statut", "COMPETITION NOM", "LOCAUX", "VISITEURS", "DPT_LOCAUX", "CP_LOCAUX",
+        "FONCTION ARBITRE", "Nom", "PRENOM", "DPT DE RESIDENCE", "Catégorie", "Niveau", "NIVEAU MIN", "NIVEAU MAX"
     ]
-    colonnes_existantes = [col for col in colonnes_a_afficher if col in filtered_df.columns]
     
+    # On vérifie quelles colonnes existent VRAIMENT avant de les afficher
+    colonnes_finales = [col for col in colonnes_a_afficher if col in filtered_df.columns]
+
     st.dataframe(
-        filtered_df[colonnes_existantes].style.apply(apply_styling, axis=1).format(
+        filtered_df[colonnes_finales].style.apply(apply_styling, axis=1).format(
             {
                 "DPT DE RESIDENCE": "{:.0f}",
                 "Niveau": "{:.0f}",
                 "NIVEAU MIN": "{:.0f}",
                 "NIVEAU MAX": "{:.0f}",
-                "DPT_LOCAUX": "{:.0f}"
+                "DPT_LOCAUX": "{:.0f}",
+                "CP_LOCAUX": "{:.0f}"
             },
-            na_rep="-" # Affiche un tiret pour les valeurs vides
+            na_rep="-"
         ),
         hide_index=True, 
         use_container_width=True
