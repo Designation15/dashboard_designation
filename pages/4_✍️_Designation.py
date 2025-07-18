@@ -14,11 +14,26 @@ from utils import (
 
 # --- Configuration et chargement des données ---
 RENCONTRES_URL = "https://docs.google.com/spreadsheets/d/1I8RGfNNdaO1wlrtFgIOFbOnzpKszwJTxdyhQ7rRD1bg/export?format=xlsx"
+RENCONTRES_FFR_URL = "https://docs.google.com/spreadsheets/d/1ViKipszuqE5LPbTcFk2QvmYq4ZNQZVs9LbzrUVC4p4Y/export?format=xlsx"
 DISPO_URL = "https://docs.google.com/spreadsheets/d/16-eSHsURF-H1zWx_a_Tu01E9AtmxjIXocpiR2t2ZNU4/export?format=xlsx"
 ARBITRES_URL = "https://docs.google.com/spreadsheets/d/1bIUxD-GDc4V94nYoI_x2mEk0i_r9Xxnf02_Rn9YtoIc/export?format=xlsx"
 CLUB_URL = "https://docs.google.com/spreadsheets/d/1GLWS4jOmwv-AOtkFZ5-b5JcjaSpBVlwqcuOCRRmEVPQ/export?format=xlsx"
 DESIGNATIONS_URL = "https://docs.google.com/spreadsheets/d/1gaPIT5477GOLNfTU0ITwbjNK1TjuO8q-yYN2YasDezg/edit#gid=0"
 SERVICE_ACCOUNT_FILE = 'designation-cle.json'
+
+ROLE_ICONS = {
+    "Arbitre de champ": "🧑‍⚖️",
+    "Arbitre Assistant 1": "🚩",
+    "Arbitre Assistant 2": "🚩",
+    "4e/5e arbitre": "📋",
+    "Représentant Fédéral (RF1)": "👔",
+    "Représentant Fédéral (RF2)": "👔",
+    "Représentant Fédéral (RF3)": "👔",
+    "Superviseur Fédéral": "🕵️‍♀️",
+    "Conseiller Arbitrage": "🕵️‍♀️",
+    "Superviseur Territorial": "🕵️‍♀️",
+    "default": "❓"
+}
 
 # --- Fonctions (inchangées) ---
 @st.cache_resource(ttl=3600)
@@ -96,115 +111,132 @@ def get_arbitre_status_for_date(arbitre_affiliation, match_date, dispo_df):
 st.set_page_config(layout="wide")
 st.title("✍️ Outil de Désignation Interactif")
 
-# Initialiser l'état de session
-if 'selected_match' not in st.session_state:
-    st.session_state.selected_match = None
-if 'previous_competition' not in st.session_state:
-    st.session_state.previous_competition = None
+if 'selected_match' not in st.session_state: st.session_state.selected_match = None
+if 'previous_competition' not in st.session_state: st.session_state.previous_competition = None
 
 gc = get_gspread_client()
 categories_df, competitions_df = load_static_data()
 rencontres_df = load_data(RENCONTRES_URL)
+rencontres_ffr_df = load_data(RENCONTRES_FFR_URL)
 dispo_df = load_data(DISPO_URL)
 arbitres_df = load_data(ARBITRES_URL)
 club_df = load_data(CLUB_URL)
 
-if 'rencontres_date_dt' not in rencontres_df.columns:
-    rencontres_df['rencontres_date_dt'] = pd.to_datetime(rencontres_df["DATE EFFECTIVE"], errors='coerce', dayfirst=True)
-if 'DATE_dt' not in dispo_df.columns:
-    dispo_df['DATE_dt'] = pd.to_datetime(dispo_df['DATE'], errors='coerce', dayfirst=True)
+# --- Pré-traitement des données ---
+if "NUMERO DE RENCONTRE" in rencontres_df.columns:
+    rencontres_df.rename(columns={"NUMERO DE RENCONTRE": "RENCONTRE NUMERO"}, inplace=True)
+if 'rencontres_date_dt' not in rencontres_df.columns: rencontres_df['rencontres_date_dt'] = pd.to_datetime(rencontres_df["DATE EFFECTIVE"], errors='coerce', dayfirst=True)
+if 'DATE_dt' not in dispo_df.columns: dispo_df['DATE_dt'] = pd.to_datetime(dispo_df['DATE'], errors='coerce', dayfirst=True)
 
-# --- Définition de la fonction de sélection ---
-def select_match(match_display_key):
-    st.session_state.selected_match = match_display_key
+# Agréger les rôles FFR par match
+if 'NUMERO RENCONTRE' in rencontres_ffr_df.columns and 'FONCTION ARBITRE' in rencontres_ffr_df.columns and 'RENCONTRE NUMERO' in rencontres_df.columns:
+    roles_par_match = rencontres_ffr_df.groupby('NUMERO RENCONTRE')['FONCTION ARBITRE'].apply(list).reset_index()
+    roles_par_match.rename(columns={'FONCTION ARBITRE': 'ROLES_FFR'}, inplace=True)
+    
+    rencontres_df['RENCONTRE NUMERO'] = rencontres_df['RENCONTRE NUMERO'].astype(str)
+    roles_par_match['NUMERO RENCONTRE'] = roles_par_match['NUMERO RENCONTRE'].astype(str)
+    
+    rencontres_df = pd.merge(rencontres_df, roles_par_match, left_on='RENCONTRE NUMERO', right_on='NUMERO RENCONTRE', how='left')
+    rencontres_df['ROLES_FFR'] = rencontres_df['ROLES_FFR'].apply(lambda x: x if isinstance(x, list) else [])
+else:
+    rencontres_df['ROLES_FFR'] = [[] for _ in range(len(rencontres_df))]
+
+def select_match(match_numero): st.session_state.selected_match = match_numero
 
 # --- Interface --- 
 left_col, right_col = st.columns([2, 3])
 
 with left_col:
     st.header("🗓️ Liste des Rencontres")
-    competition_nom = st.selectbox("Filtrer par compétition", options=competitions_df['NOM'].unique())
+    competition_options = ["Toutes"] + sorted(competitions_df['NOM'].unique().tolist())
+    competition_nom = st.selectbox("Filtrer par compétition", options=competition_options)
     
-    # --- Logique de réinitialisation ---
     if st.session_state.previous_competition != competition_nom:
         st.session_state.selected_match = None
         st.session_state.previous_competition = competition_nom
 
-    rencontres_filtrees_df = rencontres_df[rencontres_df["COMPETITION NOM"] == competition_nom].copy()
-    
-    if rencontres_filtrees_df.empty:
-        st.warning("Aucune rencontre trouvée pour cette compétition.")
+    if competition_nom == "Toutes":
+        rencontres_filtrees_df = rencontres_df.copy()
+        rencontres_filtrees_df = rencontres_filtrees_df.sort_values(by=['COMPETITION NOM', 'rencontres_date_dt'])
     else:
+        rencontres_filtrees_df = rencontres_df[rencontres_df["COMPETITION NOM"] == competition_nom].copy()
         rencontres_filtrees_df = rencontres_filtrees_df.sort_values(by='rencontres_date_dt')
-        rencontres_filtrees_df['display'] = rencontres_filtrees_df.apply(lambda x: f"{x['rencontres_date_dt'].strftime('%d/%m/%Y')} - {x['LOCAUX']} vs {x['VISITEURS']}", axis=1)
-        
-        for index, rencontre in rencontres_filtrees_df.iterrows():
+    
+    unique_matches_df = rencontres_filtrees_df.drop_duplicates(subset=['RENCONTRE NUMERO'])
+
+    if unique_matches_df.empty:
+        st.warning("Aucune rencontre trouvée.")
+    else:
+        for index, rencontre in unique_matches_df.iterrows():
             with st.container(border=True):
+                if competition_nom == "Toutes":
+                    st.caption(rencontre['COMPETITION NOM'])
                 st.subheader(f"{rencontre['LOCAUX']} vs {rencontre['VISITEURS']}")
                 st.caption(f"{rencontre['rencontres_date_dt'].strftime('%d/%m/%Y')}")
-                st.button("Sélectionner", key=f"select_{rencontre['display']}", on_click=select_match, args=(rencontre['display'],))
+                
+                roles = rencontre.get('ROLES_FFR', [])
+                if roles:
+                    icon_str = " ".join([ROLE_ICONS.get(role, ROLE_ICONS['default']) for role in roles])
+                    st.markdown(f"**Rôles pourvus :** {icon_str}")
+                
+                st.button("Sélectionner", key=f"select_{rencontre['RENCONTRE NUMERO']}", on_click=select_match, args=(rencontre['RENCONTRE NUMERO'],))
 
 with right_col:
     if 'selected_match' not in st.session_state or st.session_state.selected_match is None:
         st.info("⬅️ Sélectionnez un match dans la liste de gauche pour commencer.")
     else:
-        selected_match_display = st.session_state.selected_match
-        # S'assurer que le match sélectionné existe bien dans la liste filtrée actuelle
-        if selected_match_display not in rencontres_filtrees_df['display'].values:
-            st.info("⬅️ Le match précédemment sélectionné n'est plus dans cette liste. Veuillez en choisir un autre.")
-        else:
-            rencontre_details = rencontres_filtrees_df[rencontres_filtrees_df['display'] == selected_match_display].iloc[0]
-            date_rencontre = rencontre_details['rencontres_date_dt']
+        selected_match_numero = st.session_state.selected_match
+        rencontre_details = rencontres_df[rencontres_df['RENCONTRE NUMERO'] == selected_match_numero].iloc[0]
+        date_rencontre = rencontre_details['rencontres_date_dt']
 
-            st.header(f"🎯 {rencontre_details['LOCAUX']} vs {rencontre_details['VISITEURS']}")
-            st.subheader("Arbitres qualifiés")
+        st.header(f"🎯 {rencontre_details['LOCAUX']} vs {rencontre_details['VISITEURS']}")
+        
+        st.subheader("Options de Filtrage")
+        c1, c2 = st.columns(2)
+        with c1: use_level_filter = st.checkbox("Filtre de Niveau", value=True)
+        with c2: use_neutrality_filter = st.checkbox("Filtre de Neutralité Départementale", value=True)
+        st.divider()
 
-            # --- Processus de filtrage ---
+        st.subheader("Arbitres Disponibles")
+
+        # --- Processus de filtrage ---
+        locaux_code = extract_club_code_from_team_string(rencontre_details["LOCAUX"])
+        visiteurs_code = extract_club_code_from_team_string(rencontre_details["VISITEURS"])
+        arbitres_filtres = arbitres_df[~arbitres_df['Code Club'].astype(str).isin([str(locaux_code), str(visiteurs_code)])]
+
+        if use_level_filter:
             competition_info = competitions_df[competitions_df['NOM'] == rencontre_details["COMPETITION NOM"]].iloc[0]
             niveau_min, niveau_max = (competition_info['NIVEAU MIN'], competition_info['NIVEAU MAX'])
             if niveau_min > niveau_max: niveau_min, niveau_max = niveau_max, niveau_min
+            arbitres_filtres = pd.merge(arbitres_filtres, categories_df, left_on='Catégorie', right_on='CATEGORIE', how='left')
+            arbitres_filtres = arbitres_filtres[arbitres_filtres['Niveau'].between(niveau_min, niveau_max)]
 
-            arbitres_df_avec_niveau = pd.merge(arbitres_df, categories_df, left_on='Catégorie', right_on='CATEGORIE', how='left')
-            arbitres_qualifies_niveau = arbitres_df_avec_niveau[arbitres_df_avec_niveau['Niveau'].between(niveau_min, niveau_max)]
+        dpt_locaux = get_department_from_club_name_or_code(rencontre_details["LOCAUX"], club_df, {"club_nom": "Nom", "club_code": "Code", "club_dpt": "DPT", "club_cp": "CP"})
+        if use_neutrality_filter and dpt_locaux and dpt_locaux != "Non trouvé":
+            arbitres_filtres = arbitres_filtres[arbitres_filtres['Département de Résidence'].astype(str) != str(dpt_locaux)]
 
-            dpt_locaux = get_department_from_club_name_or_code(rencontre_details["LOCAUX"], club_df, {"club_nom": "Nom", "club_code": "Code", "club_dpt": "DPT", "club_cp": "CP"})
-            dpt_visiteurs = get_department_from_club_name_or_code(rencontre_details["VISITEURS"], club_df, {"club_nom": "Nom", "club_code": "Code", "club_dpt": "DPT", "club_cp": "CP"})
-            dpts_to_exclude = [d for d in [dpt_locaux, dpt_visiteurs] if d and d != "Non trouvé"]
-            
-            arbitres_apres_neutralite = arbitres_qualifies_niveau
-            if dpts_to_exclude:
-                arbitres_apres_neutralite = arbitres_qualifies_niveau[~arbitres_qualifies_niveau['Département de Résidence'].astype(str).isin(dpts_to_exclude)]
+        arbitres_filtres = arbitres_filtres.sort_values(by='Niveau', ascending=True)
 
-            # --- Tri par compétence et affichage amélioré ---
-            arbitres_apres_neutralite = arbitres_apres_neutralite.sort_values(by='Niveau', ascending=True)
-
-            if arbitres_apres_neutralite.empty:
-                st.warning("Aucun arbitre qualifié et neutre trouvé pour cette rencontre.")
-            else:
-                st.write(f"{len(arbitres_apres_neutralite)} arbitres qualifiés et neutres trouvés (triés par niveau) :")
-                for index, arbitre in arbitres_apres_neutralite.iterrows():
-                    status_text, is_designable = get_arbitre_status_for_date(arbitre['Numéro Affiliation'], date_rencontre, dispo_df)
-                    
-                    with st.container(border=True):
-                        col1, col2, col3 = st.columns([2, 2, 1])
-                        with col1:
-                            st.write(f"**{arbitre['Nom']} {arbitre['Prénom']}**")
-                            st.caption(f"Catégorie : {arbitre['Catégorie']} (Niveau {arbitre['Niveau']})")
-                        with col2:
-                            if is_designable:
-                                st.success(status_text, icon="✅")
-                            else:
-                                st.warning(status_text, icon="⚠️")
-                        with col3:
-                            button_key = f"designate_{selected_match_display}_{arbitre['Numéro Affiliation']}"
-                            if st.button("Désigner", key=button_key, disabled=not is_designable, use_container_width=True):
-                                if gc:
-                                    with st.spinner("Enregistrement..."):
-                                        success = enregistrer_designation(gc, rencontre_details, arbitre, dpt_locaux)
-                                        if success:
-                                            st.success("Désignation enregistrée !")
-                                            st.rerun()
-                                        else:
-                                            st.error("Échec de l'enregistrement.")
-                                else:
-                                    st.error("Client Google Sheets non authentifié.")
+        if arbitres_filtres.empty:
+            st.warning("Aucun arbitre trouvé avec les filtres actuels.")
+        else:
+            st.write(f"{len(arbitres_filtres)} arbitres trouvés :")
+            for index, arbitre in arbitres_filtres.iterrows():
+                status_text, is_designable = get_arbitre_status_for_date(arbitre['Numéro Affiliation'], date_rencontre, dispo_df)
+                with st.container(border=True):
+                    col1, col2, col3 = st.columns([2, 2, 1])
+                    with col1:
+                        st.write(f"**{arbitre['Nom']} {arbitre['Prénom']}**")
+                        st.caption(f"Catégorie : {arbitre.get('Catégorie', 'N/A')} (Niveau {arbitre.get('Niveau', 'N/A')})")
+                    with col2:
+                        if is_designable: st.success(status_text, icon="✅")
+                        else: st.warning(status_text, icon="⚠️")
+                    with col3:
+                        button_key = f"designate_{selected_match_numero}_{arbitre['Numéro Affiliation']}"
+                        if st.button("Désigner", key=button_key, disabled=not is_designable, use_container_width=True):
+                            if gc:
+                                with st.spinner("Enregistrement..."):
+                                    success = enregistrer_designation(gc, rencontre_details, arbitre, dpt_locaux)
+                                    if success: st.success("Désignation enregistrée !"); st.rerun()
+                                    else: st.error("Échec de l'enregistrement.")
+                            else: st.error("Client Google Sheets non authentifié.")
