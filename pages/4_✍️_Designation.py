@@ -23,15 +23,10 @@ SERVICE_ACCOUNT_FILE = 'designation-cle.json'
 
 ROLE_ICONS = {
     "Arbitre de champ": "🧑‍⚖️",
-    "Arbitre Assistant 1": "🚩",
-    "Arbitre Assistant 2": "🚩",
+    "Juge de touche 1": "🚩",
+    "Juge de touche 2": "🚩",
     "4e/5e arbitre": "📋",
-    "Représentant Fédéral (RF1)": "👔",
-    "Représentant Fédéral (RF2)": "👔",
-    "Représentant Fédéral (RF3)": "👔",
-    "Superviseur Fédéral": "🕵️‍♀️",
-    "Conseiller Arbitrage": "🕵️‍♀️",
-    "Superviseur Territorial": "🕵️‍♀️",
+    "Représentant Fédéral": "👔",
     "default": "❓"
 }
 
@@ -132,10 +127,8 @@ if 'DATE_dt' not in dispo_df.columns: dispo_df['DATE_dt'] = pd.to_datetime(dispo
 if 'NUMERO RENCONTRE' in rencontres_ffr_df.columns and 'FONCTION ARBITRE' in rencontres_ffr_df.columns and 'RENCONTRE NUMERO' in rencontres_df.columns:
     roles_par_match = rencontres_ffr_df.groupby('NUMERO RENCONTRE')['FONCTION ARBITRE'].apply(list).reset_index()
     roles_par_match.rename(columns={'FONCTION ARBITRE': 'ROLES_FFR'}, inplace=True)
-    
     rencontres_df['RENCONTRE NUMERO'] = rencontres_df['RENCONTRE NUMERO'].astype(str)
     roles_par_match['NUMERO RENCONTRE'] = roles_par_match['NUMERO RENCONTRE'].astype(str)
-    
     rencontres_df = pd.merge(rencontres_df, roles_par_match, left_on='RENCONTRE NUMERO', right_on='NUMERO RENCONTRE', how='left')
     rencontres_df['ROLES_FFR'] = rencontres_df['ROLES_FFR'].apply(lambda x: x if isinstance(x, list) else [])
 else:
@@ -191,13 +184,25 @@ with right_col:
 
         st.header(f"🎯 {rencontre_details['LOCAUX']} vs {rencontre_details['VISITEURS']}")
         
+        # --- Affichage des désignations existantes ---
+        st.subheader("Désignations Actuelles")
+        if 'NUMERO RENCONTRE' in rencontres_ffr_df.columns:
+            designations_actuelles_df = rencontres_ffr_df[rencontres_ffr_df['NUMERO RENCONTRE'].astype(str) == str(selected_match_numero)]
+            if not designations_actuelles_df.empty:
+                cols_to_show = ["Nom", "PRENOM", "DPT DE RESIDENCE", "FONCTION ARBITRE"]
+                existing_cols = [col for col in cols_to_show if col in designations_actuelles_df.columns]
+                st.dataframe(designations_actuelles_df[existing_cols], hide_index=True, use_container_width=True)
+            else:
+                st.info("Aucune désignation existante pour ce match.")
+        st.divider()
+
         st.subheader("Options de Filtrage")
         c1, c2 = st.columns(2)
         with c1: use_level_filter = st.checkbox("Filtre de Niveau", value=True)
         with c2: use_neutrality_filter = st.checkbox("Filtre de Neutralité Départementale", value=True)
         st.divider()
 
-        st.subheader("Arbitres Disponibles")
+        st.subheader("Chercher un Arbitre")
 
         # --- Processus de filtrage ---
         locaux_code = extract_club_code_from_team_string(rencontre_details["LOCAUX"])
