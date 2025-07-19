@@ -123,7 +123,6 @@ if "NUMERO DE RENCONTRE" in rencontres_df.columns:
 if 'rencontres_date_dt' not in rencontres_df.columns: rencontres_df['rencontres_date_dt'] = pd.to_datetime(rencontres_df["DATE EFFECTIVE"], errors='coerce', dayfirst=True)
 if 'DATE_dt' not in dispo_df.columns: dispo_df['DATE_dt'] = pd.to_datetime(dispo_df['DATE'], errors='coerce', dayfirst=True)
 
-# Agréger les rôles FFR par match
 if 'NUMERO RENCONTRE' in rencontres_ffr_df.columns and 'FONCTION ARBITRE' in rencontres_ffr_df.columns and 'RENCONTRE NUMERO' in rencontres_df.columns:
     roles_par_match = rencontres_ffr_df.groupby('NUMERO RENCONTRE')['FONCTION ARBITRE'].apply(list).reset_index()
     roles_par_match.rename(columns={'FONCTION ARBITRE': 'ROLES_FFR'}, inplace=True)
@@ -184,7 +183,6 @@ with right_col:
 
         st.header(f"🎯 {rencontre_details['LOCAUX']} vs {rencontre_details['VISITEURS']}")
         
-        # --- Affichage des désignations existantes ---
         st.subheader("Désignations Actuelles")
         if 'NUMERO RENCONTRE' in rencontres_ffr_df.columns:
             designations_actuelles_df = rencontres_ffr_df[rencontres_ffr_df['NUMERO RENCONTRE'].astype(str) == str(selected_match_numero)]
@@ -197,9 +195,7 @@ with right_col:
         st.divider()
 
         st.subheader("Options de Filtrage")
-        c1, c2 = st.columns(2)
-        with c1: use_level_filter = st.checkbox("Filtre de Niveau", value=True)
-        with c2: use_neutrality_filter = st.checkbox("Filtre de Neutralité Départementale", value=True)
+        filter_mode = st.radio("Choisir le mode de filtrage :", ("Filtres stricts (recommandé)", "Aucun filtre (sauf appartenance club)"), horizontal=True)
         st.divider()
 
         st.subheader("Chercher un Arbitre")
@@ -209,16 +205,18 @@ with right_col:
         visiteurs_code = extract_club_code_from_team_string(rencontre_details["VISITEURS"])
         arbitres_filtres = arbitres_df[~arbitres_df['Code Club'].astype(str).isin([str(locaux_code), str(visiteurs_code)])]
 
-        if use_level_filter:
+        # Toujours fusionner pour avoir la colonne 'Niveau' disponible pour le tri
+        arbitres_filtres = pd.merge(arbitres_filtres, categories_df, left_on='Catégorie', right_on='CATEGORIE', how='left')
+
+        if filter_mode == "Filtres stricts (recommandé)":
             competition_info = competitions_df[competitions_df['NOM'] == rencontre_details["COMPETITION NOM"]].iloc[0]
             niveau_min, niveau_max = (competition_info['NIVEAU MIN'], competition_info['NIVEAU MAX'])
             if niveau_min > niveau_max: niveau_min, niveau_max = niveau_max, niveau_min
-            arbitres_filtres = pd.merge(arbitres_filtres, categories_df, left_on='Catégorie', right_on='CATEGORIE', how='left')
             arbitres_filtres = arbitres_filtres[arbitres_filtres['Niveau'].between(niveau_min, niveau_max)]
 
-        dpt_locaux = get_department_from_club_name_or_code(rencontre_details["LOCAUX"], club_df, {"club_nom": "Nom", "club_code": "Code", "club_dpt": "DPT", "club_cp": "CP"})
-        if use_neutrality_filter and dpt_locaux and dpt_locaux != "Non trouvé":
-            arbitres_filtres = arbitres_filtres[arbitres_filtres['Département de Résidence'].astype(str) != str(dpt_locaux)]
+            dpt_locaux = get_department_from_club_name_or_code(rencontre_details["LOCAUX"], club_df, {"club_nom": "Nom", "club_code": "Code", "club_dpt": "DPT", "club_cp": "CP"})
+            if dpt_locaux and dpt_locaux != "Non trouvé":
+                arbitres_filtres = arbitres_filtres[arbitres_filtres['Département de Résidence'].astype(str) != str(dpt_locaux)]
 
         arbitres_filtres = arbitres_filtres.sort_values(by='Niveau', ascending=True)
 
