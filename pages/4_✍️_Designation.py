@@ -51,7 +51,8 @@ def enregistrer_designation(client, rencontre_details, arbitre_details, dpt_terr
             "Arbitre de champ",
             arbitre_details.get("Nom", "N/A"),
             arbitre_details.get("Prénom", "N/A"),
-            arbitre_details.get("Département de Résidence", "N/A"),
+            arbitre_details.get("Département de Résidence", "N/A"), # DPT DE RESIDENCE
+            arbitre_details.get("Numéro Affiliation", "N/A"), # NUMERO LICENCE
             rencontre_details.get("Structure Organisatrice Nom", "N/A"),
             rencontre_details.get("COMPETITION NOM", "N/A"),
             rencontre_details.get("RENCONTRE NUMERO", "N/A"),

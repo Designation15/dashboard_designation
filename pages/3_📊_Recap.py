@@ -21,6 +21,10 @@ st.set_page_config(layout="wide")
 st.title("📊 Récapitulatif des Désignations")
 st.markdown("Vue consolidée de toutes les rencontres et des désignations manuelles associées.")
 
+if st.button("Rafraîchir les Données", type="primary"):
+    st.cache_data.clear()
+    st.rerun()
+
 # --- Chargement des données ---
 rencontres_df = load_data(RENCONTRES_URL)
 designations_df = load_data(DESIGNATIONS_URL)
@@ -56,6 +60,14 @@ if not rencontres_df.empty:
     for col in ['Arbitre Nom', 'Arbitre Prénom', 'Arbitre Dpt Résidence', 'Arbitre Fonction']:
         if col in recap_df.columns:
             recap_df[col].fillna("-", inplace=True)
+
+    # Formater la colonne du département de l'arbitre
+    if 'Arbitre Dpt Résidence' in recap_df.columns:
+        recap_df['Arbitre Dpt Résidence'] = recap_df['Arbitre Dpt Résidence'].apply(lambda x: str(int(x)).zfill(2) if pd.notna(x) and str(x) != '-' else '-')
+
+    # Formater la date au format FR
+    if 'DATE EFFECTIVE' in recap_df.columns:
+        recap_df['DATE EFFECTIVE'] = pd.to_datetime(recap_df['DATE EFFECTIVE'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M')
 
     # --- Filtres ---
     st.header("Filtres")
