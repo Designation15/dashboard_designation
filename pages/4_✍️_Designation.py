@@ -23,12 +23,14 @@ SERVICE_ACCOUNT_FILE = 'designation-cle.json'
 
 ROLE_ICONS = {
     "Arbitre de champ": "🧑‍⚖️",
-    "Juge de touche 1": "🚩",
-    "Juge de touche 2": "🚩",
+    "Arbitre Assistant 1": "🚩",
+    "Arbitre Assistant 2": "🚩",
     "4e/5e arbitre": "📋",
     "Représentant Fédéral": "👔",
     "default": "❓"
 }
+
+ALL_ROLES = ["Arbitre de champ", "Arbitre Assistant 1", "Arbitre Assistant 2"]
 
 # --- Fonctions (inchangées) ---
 @st.cache_resource(ttl=3600)
@@ -42,17 +44,17 @@ def get_gspread_client():
         return gspread.authorize(creds)
     except Exception: return None
 
-def enregistrer_designation(client, rencontre_details, arbitre_details, dpt_terrain):
+def enregistrer_designation(client, rencontre_details, arbitre_details, dpt_terrain, role):
     try:
         spreadsheet = client.open_by_url(DESIGNATIONS_URL)
         worksheet = spreadsheet.get_worksheet(0)
         nouvelle_ligne = [
             rencontre_details.get("rencontres_date_dt", pd.NaT).strftime("%d/%m/%Y"),
-            "Arbitre de champ",
+            role,
             arbitre_details.get("Nom", "N/A"),
             arbitre_details.get("Prénom", "N/A"),
-            arbitre_details.get("Département de Résidence", "N/A"), # DPT DE RESIDENCE
-            arbitre_details.get("Numéro Affiliation", "N/A"), # NUMERO LICENCE
+            arbitre_details.get("Département de Résidence", "N/A"),
+            arbitre_details.get("Numéro Affiliation", "N/A"), # Ajout du numéro de licence
             rencontre_details.get("Structure Organisatrice Nom", "N/A"),
             rencontre_details.get("COMPETITION NOM", "N/A"),
             rencontre_details.get("RENCONTRE NUMERO", "N/A"),
@@ -62,7 +64,9 @@ def enregistrer_designation(client, rencontre_details, arbitre_details, dpt_terr
         ]
         worksheet.append_row(nouvelle_ligne)
         return True
-    except Exception: return False
+    except Exception as e:
+        st.error(f"Erreur Google Sheets : {e}")
+        return False
 
 @st.cache_data
 def load_static_data():
@@ -113,26 +117,40 @@ if 'previous_competition' not in st.session_state: st.session_state.previous_com
 gc = get_gspread_client()
 categories_df, competitions_df = load_static_data()
 rencontres_df = load_data(RENCONTRES_URL)
+designations_df = load_data(DESIGNATIONS_URL)
 rencontres_ffr_df = load_data(RENCONTRES_FFR_URL)
 dispo_df = load_data(DISPO_URL)
 arbitres_df = load_data(ARBITRES_URL)
 club_df = load_data(CLUB_URL)
 
-# --- Pré-traitement des données ---
-if "NUMERO DE RENCONTRE" in rencontres_df.columns:
-    rencontres_df.rename(columns={"NUMERO DE RENCONTRE": "RENCONTRE NUMERO"}, inplace=True)
+# --- Pré-traitement et Fusion des Données de Désignation ---
+for df in [rencontres_df, rencontres_ffr_df, designations_df]:
+    if "NUMERO DE RENCONTRE" in df.columns:
+        df.rename(columns={"NUMERO DE RENCONTRE": "RENCONTRE NUMERO"}, inplace=True)
+    if "RENCONTRE NUMERO" in df.columns:
+        df["RENCONTRE NUMERO"] = df["RENCONTRE NUMERO"].astype(str)
+
+ffr_cols = {'RENCONTRE NUMERO', 'FONCTION ARBITRE', 'NOM', 'PRENOM', 'DPT DE RESIDENCE'}
+manual_cols = {'RENCONTRE NUMERO', 'FONCTION ARBITRE', 'NOM', 'PRENOM', 'DPT DE RESIDENCE'}
+
+if ffr_cols.issubset(rencontres_ffr_df.columns) and manual_cols.issubset(designations_df.columns):
+    designations_combinees_df = pd.concat([
+        rencontres_ffr_df[list(ffr_cols)],
+        designations_df[list(manual_cols)]
+    ], ignore_index=True)
+else:
+    designations_combinees_df = pd.DataFrame(columns=list(ffr_cols))
+
 if 'rencontres_date_dt' not in rencontres_df.columns: rencontres_df['rencontres_date_dt'] = pd.to_datetime(rencontres_df["DATE EFFECTIVE"], errors='coerce', dayfirst=True)
 if 'DATE_dt' not in dispo_df.columns: dispo_df['DATE_dt'] = pd.to_datetime(dispo_df['DATE'], errors='coerce', dayfirst=True)
 
-if 'NUMERO RENCONTRE' in rencontres_ffr_df.columns and 'FONCTION ARBITRE' in rencontres_ffr_df.columns and 'RENCONTRE NUMERO' in rencontres_df.columns:
-    roles_par_match = rencontres_ffr_df.groupby('NUMERO RENCONTRE')['FONCTION ARBITRE'].apply(list).reset_index()
-    roles_par_match.rename(columns={'FONCTION ARBITRE': 'ROLES_FFR'}, inplace=True)
-    rencontres_df['RENCONTRE NUMERO'] = rencontres_df['RENCONTRE NUMERO'].astype(str)
-    roles_par_match['NUMERO RENCONTRE'] = roles_par_match['NUMERO RENCONTRE'].astype(str)
-    rencontres_df = pd.merge(rencontres_df, roles_par_match, left_on='RENCONTRE NUMERO', right_on='NUMERO RENCONTRE', how='left')
-    rencontres_df['ROLES_FFR'] = rencontres_df['ROLES_FFR'].apply(lambda x: x if isinstance(x, list) else [])
+if 'RENCONTRE NUMERO' in designations_combinees_df.columns and 'FONCTION ARBITRE' in designations_combinees_df.columns:
+    roles_par_match = designations_combinees_df.groupby('RENCONTRE NUMERO')['FONCTION ARBITRE'].apply(list).reset_index()
+    roles_par_match.rename(columns={'FONCTION ARBITRE': 'ROLES'}, inplace=True)
+    rencontres_df = pd.merge(rencontres_df, roles_par_match, on='RENCONTRE NUMERO', how='left')
+    rencontres_df['ROLES'] = rencontres_df['ROLES'].apply(lambda x: x if isinstance(x, list) else [])
 else:
-    rencontres_df['ROLES_FFR'] = [[] for _ in range(len(rencontres_df))]
+    rencontres_df['ROLES'] = [[] for _ in range(len(rencontres_df))]
 
 def select_match(match_numero): st.session_state.selected_match = match_numero
 
@@ -167,7 +185,7 @@ with left_col:
                 st.subheader(f"{rencontre['LOCAUX']} vs {rencontre['VISITEURS']}")
                 st.caption(f"{rencontre['rencontres_date_dt'].strftime('%d/%m/%Y')}")
                 
-                roles = rencontre.get('ROLES_FFR', [])
+                roles = rencontre.get('ROLES', [])
                 if roles:
                     icon_str = " ".join([ROLE_ICONS.get(role, ROLE_ICONS['default']) for role in roles])
                     st.markdown(f"**Rôles pourvus :** {icon_str}")
@@ -185,14 +203,13 @@ with right_col:
         st.header(f"🎯 {rencontre_details['LOCAUX']} vs {rencontre_details['VISITEURS']}")
         
         st.subheader("Désignations Actuelles")
-        if 'NUMERO RENCONTRE' in rencontres_ffr_df.columns:
-            designations_actuelles_df = rencontres_ffr_df[rencontres_ffr_df['NUMERO RENCONTRE'].astype(str) == str(selected_match_numero)]
-            if not designations_actuelles_df.empty:
-                cols_to_show = ["Nom", "PRENOM", "DPT DE RESIDENCE", "FONCTION ARBITRE"]
-                existing_cols = [col for col in cols_to_show if col in designations_actuelles_df.columns]
-                st.dataframe(designations_actuelles_df[existing_cols], hide_index=True, use_container_width=True)
-            else:
-                st.info("Aucune désignation existante pour ce match.")
+        roles_actuels = rencontre_details.get('ROLES', [])
+        if roles_actuels:
+            designations_actuelles_df = designations_combinees_df[designations_combinees_df['RENCONTRE NUMERO'].astype(str) == str(selected_match_numero)]
+            cols_to_show = ["NOM", "PRENOM", "DPT DE RESIDENCE", "FONCTION ARBITRE"]
+            st.dataframe(designations_actuelles_df[cols_to_show], hide_index=True, use_container_width=True)
+        else:
+            st.info("Aucune désignation existante pour ce match.")
         st.divider()
 
         st.subheader("Options de Filtrage")
@@ -206,7 +223,6 @@ with right_col:
         visiteurs_code = extract_club_code_from_team_string(rencontre_details["VISITEURS"])
         arbitres_filtres = arbitres_df[~arbitres_df['Code Club'].astype(str).isin([str(locaux_code), str(visiteurs_code)])]
 
-        # Toujours fusionner pour avoir la colonne 'Niveau' disponible pour le tri
         arbitres_filtres = pd.merge(arbitres_filtres, categories_df, left_on='Catégorie', right_on='CATEGORIE', how='left')
 
         if filter_mode == "Filtres stricts (recommandé)":
@@ -225,22 +241,34 @@ with right_col:
             st.warning("Aucun arbitre trouvé avec les filtres actuels.")
         else:
             st.write(f"{len(arbitres_filtres)} arbitres trouvés :")
+            roles_disponibles = [role for role in ALL_ROLES if role not in roles_actuels]
             for index, arbitre in arbitres_filtres.iterrows():
                 status_text, is_designable = get_arbitre_status_for_date(arbitre['Numéro Affiliation'], date_rencontre, dispo_df)
                 with st.container(border=True):
-                    col1, col2, col3 = st.columns([2, 2, 1])
+                    col1, col2 = st.columns([2, 1])
                     with col1:
                         st.write(f"**{arbitre['Nom']} {arbitre['Prénom']}**")
                         st.caption(f"Catégorie : {arbitre.get('Catégorie', 'N/A')} (Niveau {arbitre.get('Niveau', 'N/A')})")
+                        if is_designable:
+                            st.success(status_text, icon="✅")
+                        else:
+                            st.warning(status_text, icon="⚠️")
                     with col2:
-                        if is_designable: st.success(status_text, icon="✅")
-                        else: st.warning(status_text, icon="⚠️")
-                    with col3:
-                        button_key = f"designate_{selected_match_numero}_{arbitre['Numéro Affiliation']}"
-                        if st.button("Désigner", key=button_key, disabled=not is_designable, use_container_width=True):
-                            if gc:
-                                with st.spinner("Enregistrement..."):
-                                    success = enregistrer_designation(gc, rencontre_details, arbitre, dpt_locaux)
-                                    if success: st.success("Désignation enregistrée !"); st.rerun()
-                                    else: st.error("Échec de l'enregistrement.")
-                            else: st.error("Client Google Sheets non authentifié.")
+                        if is_designable and roles_disponibles:
+                            role_key = f"role_{selected_match_numero}_{arbitre['Numéro Affiliation']}"
+                            selected_role = st.selectbox("Choisir un rôle", options=roles_disponibles, key=role_key, label_visibility="collapsed")
+                            
+                            button_key = f"designate_{selected_match_numero}_{arbitre['Numéro Affiliation']}"
+                            if st.button("Valider", key=button_key, use_container_width=True):
+                                if gc:
+                                    with st.spinner("Enregistrement..."):
+                                        success = enregistrer_designation(gc, rencontre_details, arbitre, dpt_locaux, selected_role)
+                                        if success:
+                                            st.toast("Désignation enregistrée !", icon="✅")
+                                            st.rerun()
+                                        else:
+                                            st.error("Échec de l'enregistrement.")
+                                else:
+                                    st.error("Client Google Sheets non authentifié.")
+                        elif not roles_disponibles:
+                            st.info("Complet")
