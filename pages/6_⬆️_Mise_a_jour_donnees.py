@@ -17,6 +17,7 @@ SHEET_URLS = {
     "Arbitres-052": "https://docs.google.com/spreadsheets/d/1bIUxD-GDc4V94nYoI_x2mEk0i_r9Xxnf02_Rn9YtoIc/edit",
     "Clubs-007": "https://docs.google.com/spreadsheets/d/1GLWS4jOmwv-AOtkFZ5-b5JcjaSpBVlwqcuOCRRmEVPQ/edit",
     "RencontresFFR-023": "https://docs.google.com/spreadsheets/d/1ViKipszuqE5LPbTcFk2QvmYq4ZNQZVs9LbzrUVC4p4Y/edit",
+    "Designations": "https://docs.google.com/spreadsheets/d/1gaPIT5477GOLNfTU0ITwbjNK1TjuO8q-yYN2YasDezg/edit", # URL de la feuille de désignations
 }
 
 
@@ -93,6 +94,36 @@ def update_google_sheet(client, sheet_url, df_new, data_type):
         st.exception(e) # Affiche la trace complète de l'exception
         return False
 
+# --- Fonction pour effacer toutes les lignes sauf l'en-tête ---
+def clear_sheet_except_header(client, sheet_url):
+    try:
+        sheet_id = sheet_url.split('/d/')[1].split('/')[0]
+        st.write(f"Tentative d'ouverture de la feuille avec l'ID : {sheet_id}")
+        spreadsheet = client.open_by_url(sheet_url)
+        worksheet = spreadsheet.get_worksheet(0)
+
+        # Lire l'en-tête (première ligne)
+        header = worksheet.row_values(1)
+
+        # Effacer tout le contenu
+        worksheet.clear()
+
+        # Réécrire l'en-tête
+        worksheet.update([header])
+        st.success(f"Toutes les lignes (sauf l'en-tête) ont été effacées de la feuille : {sheet_url}")
+        return True
+    except gspread.exceptions.SpreadsheetNotFound:
+        st.error(f"Erreur : Feuille Google Sheet introuvable pour l'URL : {sheet_url}. Vérifiez l'ID et les permissions.")
+        return False
+    except gspread.exceptions.APIError as e:
+        st.error(f"Erreur API Google Sheets lors de l'effacement ({sheet_url}) : {e.response.text}")
+        st.exception(e)
+        return False
+    except Exception as e:
+        st.error(f"Erreur inattendue lors de l'effacement de la feuille Google Sheet ({sheet_url}) : {e}")
+        st.exception(e)
+        return False
+
 # --- Interface Streamlit ---
 st.title("⬆️ Mise à jour des Données")
 st.markdown("Téléchargez un nouveau fichier Excel pour mettre à jour les données dans Google Sheets.")
@@ -130,5 +161,15 @@ if gc:
             except Exception as e:
                 st.error(f"Erreur lors de la lecture du fichier Excel : {e}")
                 st.info("Assurez-vous que le fichier est un fichier Excel valide (.xlsx).")
+
+    st.subheader("3. Effacer les données de la feuille de Désignations")
+    st.warning("Attention : Ce bouton effacera TOUTES les lignes (sauf l'en-tête) de la feuille 'Designations' dans Google Sheets. Cette action est irréversible.")
+    if st.button("Effacer les données de Désignations"):
+        designations_sheet_url = SHEET_URLS["Designations"]
+        with st.spinner("Effacement des données en cours..."):
+            if clear_sheet_except_header(gc, designations_sheet_url):
+                st.success("Données de Désignations effacées avec succès !")
+            else:
+                st.error("L'effacement des données de Désignations a échoué.")
 else:
     st.warning("Impossible de se connecter à Google Sheets. Veuillez vérifier la configuration.")
