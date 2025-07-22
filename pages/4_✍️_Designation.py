@@ -18,7 +18,7 @@ RENCONTRES_FFR_URL = "https://docs.google.com/spreadsheets/d/1ViKipszuqE5LPbTcFk
 DISPO_URL = "https://docs.google.com/spreadsheets/d/16-eSHsURF-H1zWx_a_Tu01E9AtmxjIXocpiR2t2ZNU4/export?format=xlsx"
 ARBITRES_URL = "https://docs.google.com/spreadsheets/d/1bIUxD-GDc4V94nYoI_x2mEk0i_r9Xxnf02_Rn9YtoIc/export?format=xlsx"
 CLUB_URL = "https://docs.google.com/spreadsheets/d/1GLWS4jOmwv-AOtkFZ5-b5JcjaSpBVlwqcuOCRRmEVPQ/export?format=xlsx"
-DESIGNATIONS_URL = "https://docs.google.com/spreadsheets/d/1gaPIT5477GOLNfTU0ITwbjNK1TjuO8q-yYN2YasDezg/edit#gid=0"
+DESIGNATIONS_URL = "https://docs.google.com/spreadsheets/d/1gaPIT5477GOLNfTU0ITwbjNK1TjuO8q-yYN2YasDezg/export?format=xlsx"
 SERVICE_ACCOUNT_FILE = 'designation-cle.json'
 
 ROLE_ICONS = {
@@ -125,13 +125,22 @@ club_df = load_data(CLUB_URL)
 
 # --- Pré-traitement et Fusion des Données de Désignation ---
 for df in [rencontres_df, rencontres_ffr_df, designations_df]:
-    if "NUMERO DE RENCONTRE" in df.columns:
-        df.rename(columns={"NUMERO DE RENCONTRE": "RENCONTRE NUMERO"}, inplace=True)
+    if "NUMERO RENCONTRE" in df.columns:
+        df.rename(columns={"NUMERO RENCONTRE": "RENCONTRE NUMERO"}, inplace=True)
     if "RENCONTRE NUMERO" in df.columns:
         df["RENCONTRE NUMERO"] = df["RENCONTRE NUMERO"].astype(str)
 
+
 ffr_cols = {'RENCONTRE NUMERO', 'FONCTION ARBITRE', 'NOM', 'PRENOM', 'DPT DE RESIDENCE'}
 manual_cols = {'RENCONTRE NUMERO', 'FONCTION ARBITRE', 'NOM', 'PRENOM', 'DPT DE RESIDENCE'}
+
+# Harmonisation des noms de colonnes dans rencontres_ffr_df
+rencontres_ffr_df.rename(columns={
+    "NUMERO RENCONTRE": "RENCONTRE NUMERO",
+    "Nom": "NOM"
+}, inplace=True)
+
+
 
 if ffr_cols.issubset(rencontres_ffr_df.columns) and manual_cols.issubset(designations_df.columns):
     designations_combinees_df = pd.concat([
@@ -153,6 +162,8 @@ else:
     rencontres_df['ROLES'] = [[] for _ in range(len(rencontres_df))]
 
 def select_match(match_numero): st.session_state.selected_match = match_numero
+#st.write("Contenu de designations_combinees_df :")
+#st.dataframe(designations_combinees_df)
 
 # --- Interface --- 
 left_col, right_col = st.columns([2, 3])
