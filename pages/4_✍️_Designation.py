@@ -213,6 +213,26 @@ with right_col:
 
         st.header(f"🎯 {rencontre_details['LOCAUX']} vs {rencontre_details['VISITEURS']}")
         
+        col_refresh, _ = st.columns([1, 3])
+        with col_refresh:
+            if st.button("🔄 Rafraîchir les désignations", help="Met à jour uniquement les désignations manuelles"):
+                # Clear le cache pour forcer le rechargement
+                st.cache_data.clear()
+                # Recharger toutes les données nécessaires
+                designations_df = load_data(DESIGNATIONS_URL)
+                rencontres_ffr_df = load_data(RENCONTRES_FFR_URL)
+                # Reconstruire les données combinées
+                if ffr_cols.issubset(rencontres_ffr_df.columns) and manual_cols.issubset(designations_df.columns):
+                    designations_combinees_df = pd.concat([
+                        rencontres_ffr_df[list(ffr_cols)],
+                        designations_df[list(manual_cols)]
+                    ], ignore_index=True)
+                # Forcer le recalcul des rôles
+                roles_par_match = designations_combinees_df.groupby('RENCONTRE NUMERO')['FONCTION ARBITRE'].apply(list).reset_index()
+                roles_par_match.rename(columns={'FONCTION ARBITRE': 'ROLES'}, inplace=True)
+                rencontre_details = pd.merge(rencontre_details.to_frame().T, roles_par_match, on='RENCONTRE NUMERO', how='left')
+                st.rerun()
+        
         st.subheader("Désignations Actuelles")
         roles_actuels = rencontre_details.get('ROLES', [])
         if roles_actuels:
@@ -248,38 +268,83 @@ with right_col:
 
         arbitres_filtres = arbitres_filtres.sort_values(by='Niveau', ascending=True)
 
+        # Section d'affichage des arbitres
         if arbitres_filtres.empty:
             st.warning("Aucun arbitre trouvé avec les filtres actuels.")
         else:
-            st.write(f"{len(arbitres_filtres)} arbitres trouvés :")
+            st.write(f"{len(arbitres_filtres)} arbitres trouvés")
+            
+            # Vérification des colonnes requises
+            required_columns = ['Nom', 'Prénom', 'Numéro Affiliation', 'Catégorie', 'Niveau']
+            if not all(col in arbitres_filtres.columns for col in required_columns):
+                st.error(f"Colonnes manquantes dans arbitres_filtres. Requises: {required_columns}")
+                st.write("Colonnes disponibles:", arbitres_filtres.columns.tolist())
+                st.stop()
+            
+            # Afficher les arbitres
             roles_disponibles = [role for role in ALL_ROLES if role not in roles_actuels]
+            
             for index, arbitre in arbitres_filtres.iterrows():
-                status_text, is_designable = get_arbitre_status_for_date(arbitre['Numéro Affiliation'], date_rencontre, dispo_df)
                 with st.container(border=True):
                     col1, col2 = st.columns([2, 1])
+                    
+                    # Colonne de gauche - Infos arbitre
                     with col1:
-                        st.write(f"**{arbitre['Nom']} {arbitre['Prénom']}**")
-                        st.caption(f"Catégorie : {arbitre.get('Catégorie', 'N/A')} (Niveau {arbitre.get('Niveau', 'N/A')})")
-                        if is_designable:
-                            st.success(status_text, icon="✅")
-                        else:
-                            st.warning(status_text, icon="⚠️")
+                        # Vérifier si l'arbitre est déjà désigné
+                        est_deja_designe = False
+                        if not designations_df.empty and 'NUMERO LICENCE' in designations_df.columns:
+                            est_deja_designe = not designations_df[designations_df['NUMERO LICENCE'].astype(str) == str(arbitre['Numéro Affiliation'])].empty
+                        
+                        nom_affichage = f"**{arbitre['Nom']} {arbitre['Prénom']}**"
+                        if est_deja_designe:
+                            st.success("✏️ Désignation MANUELLE", icon="✏️")
+                            # Récupérer les infos de la rencontre où l'arbitre est désigné
+                            designation_info = designations_df[
+                                (designations_df['NUMERO LICENCE'].astype(str) == str(arbitre['Numéro Affiliation']))
+                            ].iloc[0]
+                            rencontre_date = pd.to_datetime(designation_info['DATE'], dayfirst=True, errors='coerce')
+                            if not pd.isna(rencontre_date):
+                                st.caption(f"📅 Désigné le {rencontre_date.strftime('%d/%m/%Y')} sur {designation_info.get('LOCAUX', '?')} vs {designation_info.get('VISITEURS', '?')}")
+                        
+                        st.write(nom_affichage)
+                        st.caption(f"Catégorie : {arbitre['Catégorie']} (Niveau {arbitre['Niveau']}) | Département: {arbitre['Département de Résidence']}")
+                    
+                    # Colonne de droite - Statut et actions
                     with col2:
-                        if is_designable and roles_disponibles:
-                            role_key = f"role_{selected_match_numero}_{arbitre['Numéro Affiliation']}"
-                            selected_role = st.selectbox("Choisir un rôle", options=roles_disponibles, key=role_key, label_visibility="collapsed")
+                        try:
+                            status_text, is_designable = get_arbitre_status_for_date(
+                                arbitre['Numéro Affiliation'], 
+                                date_rencontre, 
+                                dispo_df
+                            )
                             
-                            button_key = f"designate_{selected_match_numero}_{arbitre['Numéro Affiliation']}"
-                            if st.button("Valider", key=button_key, use_container_width=True):
-                                if gc:
-                                    with st.spinner("Enregistrement..."):
-                                        success = enregistrer_designation(gc, rencontre_details, arbitre, dpt_locaux, selected_role)
-                                        if success:
-                                            st.toast("Désignation enregistrée !", icon="✅")
-                                            st.rerun()
-                                        else:
-                                            st.error("Échec de l'enregistrement.")
-                                else:
-                                    st.error("Client Google Sheets non authentifié.")
-                        elif not roles_disponibles:
-                            st.info("Complet")
+                            if is_designable:
+                                st.success(status_text, icon="✅")
+                            else:
+                                st.warning(status_text, icon="⚠️")
+                            
+                            if is_designable and roles_disponibles:
+                                role_key = f"role_{selected_match_numero}_{arbitre['Numéro Affiliation']}"
+                                selected_role = st.selectbox(
+                                    "Choisir un rôle", 
+                                    options=roles_disponibles, 
+                                    key=role_key, 
+                                    label_visibility="collapsed"
+                                )
+                                
+                                button_key = f"designate_{selected_match_numero}_{arbitre['Numéro Affiliation']}"
+                                if st.button("Valider", key=button_key, use_container_width=True):
+                                    if gc:
+                                        with st.spinner("Enregistrement..."):
+                                            success = enregistrer_designation(gc, rencontre_details, arbitre, dpt_locaux, selected_role)
+                                            if success:
+                                                st.toast("Désignation enregistrée !", icon="✅")
+                                                st.rerun()
+                                            else:
+                                                st.error("Échec de l'enregistrement.")
+                                    else:
+                                        st.error("Client Google Sheets non authentifié")
+                            elif not roles_disponibles:
+                                st.info("Complet")
+                        except Exception as e:
+                            st.error(f"Erreur lors de l'affichage du statut: {str(e)}")

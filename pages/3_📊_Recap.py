@@ -19,7 +19,7 @@ def load_data(url):
 # --- Initialisation ---
 st.set_page_config(layout="wide")
 st.title("📊 Récapitulatif des Désignations")
-st.markdown("Vue consolidée de toutes les rencontres et des désignations manuelles associées.")
+st.markdown("RS_OVALE2-024 - Vue consolidée de toutes les rencontres et des désignations manuelles associées.")
 
 if st.button("Rafraîchir les Données", type="primary"):
     st.cache_data.clear()

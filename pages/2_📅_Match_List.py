@@ -48,6 +48,7 @@ competitions_df = load_static_competitions()
 
 # --- Application ---
 st.title("📅 Liste des Rencontres")
+st.markdown("RS_OVALE2-024 - Vue consolidée de toutes les rencontres")
 
 if not rencontres_df.empty:
     # Convertir la colonne de date avec dayfirst=True

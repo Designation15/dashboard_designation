@@ -35,6 +35,7 @@ dispo_df = load_data(DISPO_URL)
 
 # --- Application ---
 st.title("✅ Disponibilités des Arbitres")
+st.markdown("RS_OVALE2-022 - Vue consolidée de toutes les disponibilités des arbitres.")
 
 st.header("Filtres")
 
