@@ -295,9 +295,13 @@ with right_col:
                         if not designations_df.empty and 'NUMERO LICENCE' in designations_df.columns:
                             est_deja_designe = not designations_df[designations_df['NUMERO LICENCE'].astype(str) == str(arbitre['Numéro Affiliation'])].empty
                         
-                        nom_affichage = f"**{arbitre['Nom']} {arbitre['Prénom']}**"
+                        # Ajout icône JT si applicable
+                        jt_icon = " ⚑" if str(arbitre.get('JT', '')).strip().upper() == 'OUI' else ""
+                        nom_affichage = f"**{arbitre['Nom']} {arbitre['Prénom']}{jt_icon}**"
                         if est_deja_designe:
                             st.success("✏️ Désignation MANUELLE", icon="✏️")
+                            if jt_icon:
+                                st.caption("Arbitre JT (Juge de Touche)")
                             # Récupérer les infos de la rencontre où l'arbitre est désigné
                             designation_info = designations_df[
                                 (designations_df['NUMERO LICENCE'].astype(str) == str(arbitre['Numéro Affiliation']))
