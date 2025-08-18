@@ -87,9 +87,25 @@ def load_static_data():
 def load_data(url):
     try:
         df = pd.read_excel(url)
+        if df.empty:
+            st.warning(f"La feuille DESIGNATIONS est vide")
         df.columns = df.columns.str.strip()
         return df
-    except Exception: return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Erreur de chargement {url} : {str(e)}")
+        return pd.DataFrame()
+
+def load_designations_from_sheets():
+    try:
+        gc = get_gspread_client()
+        if gc:
+            spreadsheet = gc.open_by_url(DESIGNATIONS_URL)
+            worksheet = spreadsheet.get_worksheet(0)
+            return pd.DataFrame(worksheet.get_all_records())
+        return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Erreur Google Sheets : {str(e)}")
+        return pd.DataFrame()
 
 def get_arbitre_status_for_date(arbitre_affiliation, match_date, dispo_df):
     start_of_week = match_date - timedelta(days=match_date.weekday())
@@ -117,7 +133,11 @@ if 'previous_competition' not in st.session_state: st.session_state.previous_com
 gc = get_gspread_client()
 categories_df, competitions_df = load_static_data()
 rencontres_df = load_data(RENCONTRES_URL)
-designations_df = load_data(DESIGNATIONS_URL)
+# Chargement via API Google Sheets directement
+designations_df = load_designations_from_sheets()
+if designations_df.empty:
+    # Fallback sur l'ancienne méthode
+    designations_df = load_data(DESIGNATIONS_URL)
 rencontres_ffr_df = load_data(RENCONTRES_FFR_URL)
 dispo_df = load_data(DISPO_URL)
 arbitres_df = load_data(ARBITRES_URL)
@@ -238,7 +258,45 @@ with right_col:
         if roles_actuels:
             designations_actuelles_df = designations_combinees_df[designations_combinees_df['RENCONTRE NUMERO'].astype(str) == str(selected_match_numero)]
             cols_to_show = ["NOM", "PRENOM", "DPT DE RESIDENCE", "FONCTION ARBITRE"]
-            st.dataframe(designations_actuelles_df[cols_to_show], hide_index=True, use_container_width=True)
+            
+            # Afficher chaque désignation avec un bouton de suppression si désignation manuelle
+            for idx, row in designations_actuelles_df.iterrows():
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                    # Formatage du département sur 2 caractères
+                    dpt = str(row['DPT DE RESIDENCE']).zfill(2)[:2]
+                    st.write(f"{row['NOM']} {row['PRENOM']} ({dpt}) - {row['FONCTION ARBITRE']}")
+                with col2:
+                    # Vérifier si c'est une désignation manuelle (présente dans designations_df)
+                    is_manual = any(
+                        (str(d_row.get('RENCONTRE NUMERO', '')) == str(selected_match_numero) and
+                         str(d_row.get('NOM', '')) == str(row['NOM']) and
+                         str(d_row.get('PRENOM', '')) == str(row['PRENOM']) and
+                         str(d_row.get('FONCTION ARBITRE', '')) == str(row['FONCTION ARBITRE']))
+                        for _, d_row in designations_df.iterrows()
+                    )
+                    if is_manual and st.button("Supprimer", key=f"delete_{idx}"):
+                        if st.session_state.get(f"confirm_delete_{idx}", False):
+                            # Suppression dans Google Sheets
+                            try:
+                                gc = get_gspread_client()
+                                if gc:
+                                    spreadsheet = gc.open_by_url(DESIGNATIONS_URL)
+                                    worksheet = spreadsheet.get_worksheet(0)
+                                    records = worksheet.get_all_records()
+                                    for i, record in enumerate(records, start=2):
+                                        if (str(record.get('RENCONTRE NUMERO', '')) == str(selected_match_numero) and \
+                                           str(record.get('NOM', '')) == str(row['NOM']) and \
+                                           str(record.get('PRENOM', '')) == str(row['PRENOM']) and \
+                                           str(record.get('FONCTION ARBITRE', '')) == str(row['FONCTION ARBITRE'])):
+                                            worksheet.delete_rows(i)
+                                            st.success("Désignation supprimée !")
+                                            st.rerun()
+                            except Exception as e:
+                                st.error(f"Erreur lors de la suppression : {e}")
+                        else:
+                            st.session_state[f"confirm_delete_{idx}"] = True
+                            st.warning("Confirmez la suppression en cliquant à nouveau")
         else:
             st.info("Aucune désignation existante pour ce match.")
         st.divider()

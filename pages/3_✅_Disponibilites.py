@@ -98,12 +98,12 @@ if not arbitres_df.empty:
             # Renommage des colonnes avant création du pivot
             arbitres_avec_dispo = arbitres_avec_dispo.rename(columns={
                 'Club_x': 'Club',
-                'Nombre  de matchs à arbitrer_x': 'Nombre de matchs à arbitrer'
+                'Nombre  de matchs à arbitrer_x': 'Nbr matchs\nà arbitrer'
             })
             
             grille_dispo = arbitres_avec_dispo.pivot_table(
                 index=[COLUMN_MAPPING['arbitres_nom'], COLUMN_MAPPING['arbitres_prenom'], 
-                      COLUMN_MAPPING['arbitres_categorie'], 'Club', 'Nombre de matchs à arbitrer'],
+                      COLUMN_MAPPING['arbitres_categorie'], 'Club', 'Nbr matchs\nà arbitrer'],
                 columns='DATE_AFFICHAGE',
                 values=[COLUMN_MAPPING['dispo_disponibilite'], COLUMN_MAPPING['dispo_designation']],
                 aggfunc='first'
@@ -114,6 +114,9 @@ if not arbitres_df.empty:
                 <style>
                     .stDataFrame {
                         width: 100%;
+                    }
+                    .col_heading.level0.col4 {
+                        text-align: center;
                     }
                 </style>
             """, unsafe_allow_html=True)
