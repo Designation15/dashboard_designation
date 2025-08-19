@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 
 # Importations centralisées
 from utils import load_data
@@ -52,31 +53,6 @@ def load_all_data():
     return merged_df
 
 # --- Fonctions de vérification ---
-def check_neutrality(row):
-    dpt_locaux = row.get("DPT_LOCAUX")
-    dpt_residence = row.get("DPT DE RESIDENCE")
-    if row.get("FONCTION ARBITRE") == "Arbitre de champ" and pd.notna(dpt_residence) and pd.notna(dpt_locaux):
-        try:
-            if int(dpt_residence) == int(dpt_locaux):
-                return "⚠️ Neutralité"
-        except (ValueError, TypeError):
-            pass
-    return ""
-
-def check_competence(row):
-    if row.get("FONCTION ARBITRE") == "Arbitre de champ":
-        try:
-            niveau = int(row.get('Niveau'))
-            niveau_min = int(row.get('NIVEAU MIN'))
-            niveau_max = int(row.get('NIVEAU MAX'))
-            borne_inf = min(niveau_min, niveau_max)
-            borne_sup = max(niveau_min, niveau_max)
-            if not (borne_inf <= niveau <= borne_sup):
-                return "❌ Compétence"
-        except (ValueError, TypeError):
-            pass
-    return ""
-
 def apply_styling(row):
     if "Neutralité" in row["Statut"]:
         return ['background-color: #FFDDC1'] * len(row)
@@ -108,8 +84,28 @@ if not data_df.empty:
         )
         filtered_df = filtered_df[search_mask]
 
-    filtered_df["Statut"] = filtered_df.apply(lambda row: " ".join(filter(None, [check_neutrality(row), check_competence(row)])), axis=1)
-    filtered_df["Statut"] = filtered_df["Statut"].replace("", "✅ OK")
+    # --- Calcul du Statut (version vectorisée) ---
+    is_main_ref = filtered_df["FONCTION ARBITRE"] == "Arbitre de champ"
+    
+    # 1. Vérification de la Neutralité
+    dpt_residence = pd.to_numeric(filtered_df["DPT DE RESIDENCE"], errors='coerce')
+    dpt_locaux = pd.to_numeric(filtered_df["DPT_LOCAUX"], errors='coerce')
+    is_same_dpt = dpt_residence == dpt_locaux
+    neutrality_statut = np.where(is_main_ref & is_same_dpt, "⚠️ Neutralité", "")
+
+    # 2. Vérification de la Compétence
+    niveau = pd.to_numeric(filtered_df['Niveau'], errors='coerce')
+    niveau_min = pd.to_numeric(filtered_df['NIVEAU MIN'], errors='coerce')
+    niveau_max = pd.to_numeric(filtered_df['NIVEAU MAX'], errors='coerce')
+    borne_inf = np.minimum(niveau_min, niveau_max)
+    borne_sup = np.maximum(niveau_min, niveau_max)
+    is_not_competent = ~niveau.between(borne_inf, borne_sup)
+    competence_statut = np.where(is_main_ref & is_not_competent, "❌ Compétence", "")
+
+    # 3. Combinaison des statuts
+    statut_final = pd.Series(neutrality_statut) + " " + pd.Series(competence_statut)
+    filtered_df["Statut"] = statut_final.str.strip().replace("", "✅ OK")
+
 
     st.header("Statistiques des Désignations")
     total_matchs = filtered_df["NUMERO RENCONTRE"].nunique()
@@ -130,7 +126,6 @@ if not data_df.empty:
         "FONCTION ARBITRE", "Nom", "PRENOM", "DPT DE RESIDENCE", "Catégorie", "Niveau", "NIVEAU MIN", "NIVEAU MAX"
     ]
     
-    # On vérifie quelles colonnes existent VRAIMENT avant de les afficher
     colonnes_finales = [col for col in colonnes_a_afficher if col in filtered_df.columns]
 
     st.dataframe(
