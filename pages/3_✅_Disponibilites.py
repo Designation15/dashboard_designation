@@ -1,37 +1,14 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from utils import highlight_designated_cells
 
-# --- Configuration et chargement des données ---
-ARBITRES_URL = "https://docs.google.com/spreadsheets/d/1bIUxD-GDc4V94nYoI_x2mEk0i_r9Xxnf02_Rn9YtoIc/export?format=xlsx"
-DISPO_URL = "https://docs.google.com/spreadsheets/d/16-eSHsURF-H1zWx_a_Tu01E9AtmxjIXocpiR2t2ZNU4/export?format=xlsx"
-
-COLUMN_MAPPING = {
-    "dispo_date": "DATE",
-    "dispo_disponibilite": "DISPONIBILITE",
-    "dispo_licence": "NO LICENCE",
-    "dispo_designation": "DESIGNATION",
-    "arbitres_affiliation": "Numéro Affiliation",
-    "arbitres_nom": "Nom",
-    "arbitres_prenom": "Prénom",
-    "arbitres_categorie": "Catégorie",
-    "categories_nom": "CATEGORIE",
-}
-
-@st.cache_data
-def load_data(url):
-    try:
-        df = pd.read_excel(url)
-        df.columns = df.columns.str.strip()
-        return df
-    except Exception as e:
-        st.error(f"Impossible de charger les données depuis {url}. Erreur: {e}")
-        return pd.DataFrame()
+# Importations centralisées
+from utils import highlight_designated_cells, load_data
+import config
 
 # --- Chargement des données ---
-arbitres_df = load_data(ARBITRES_URL)
-dispo_df = load_data(DISPO_URL)
+arbitres_df = load_data(config.ARBITRES_URL)
+dispo_df = load_data(config.DISPO_URL)
 
 # --- Application ---
 st.title("✅ Disponibilités des Arbitres")
@@ -44,7 +21,7 @@ if st.button("🔄 Vider le cache et recharger les données"):
 st.header("Filtres")
 
 if not arbitres_df.empty:
-    all_categories = ["Toutes"] + list(arbitres_df[COLUMN_MAPPING['arbitres_categorie']].unique())
+    all_categories = ["Toutes"] + list(arbitres_df[config.COLUMN_MAPPING['arbitres_categorie']].unique())
     selected_categories = st.multiselect(
         "Filtrer par catégorie d'arbitre",
         options=all_categories,
@@ -52,23 +29,23 @@ if not arbitres_df.empty:
     )
 
     if "Toutes" not in selected_categories:
-        arbitres_filtres = arbitres_df[arbitres_df[COLUMN_MAPPING['arbitres_categorie']].isin(selected_categories)]
+        arbitres_filtres = arbitres_df[arbitres_df[config.COLUMN_MAPPING['arbitres_categorie']].isin(selected_categories)]
     else:
         arbitres_filtres = arbitres_df
 
     if not dispo_df.empty:
-        dispo_df['DATE EFFECTIVE'] = pd.to_datetime(dispo_df[COLUMN_MAPPING['dispo_date']], errors='coerce')
+        dispo_df['DATE EFFECTIVE'] = pd.to_datetime(dispo_df[config.COLUMN_MAPPING['dispo_date']], errors='coerce')
         dispo_a_merger = dispo_df[[
-            COLUMN_MAPPING['dispo_licence'],
-            COLUMN_MAPPING['dispo_disponibilite'],
-            COLUMN_MAPPING['dispo_designation'],
+            config.COLUMN_MAPPING['dispo_licence'],
+            config.COLUMN_MAPPING['dispo_disponibilite'],
+            config.COLUMN_MAPPING['dispo_designation'],
             'DATE EFFECTIVE'
         ]]
         arbitres_avec_dispo = pd.merge(
             arbitres_filtres,
             dispo_a_merger,
-            left_on=COLUMN_MAPPING['arbitres_affiliation'],
-            right_on=COLUMN_MAPPING['dispo_licence'],
+            left_on=config.COLUMN_MAPPING['arbitres_affiliation'],
+            right_on=config.COLUMN_MAPPING['dispo_licence'],
             how='inner'
         )
 
@@ -84,8 +61,8 @@ if not arbitres_df.empty:
 
             # Ajout des colonnes Club et Nb matchs à arbitrer
             arbitres_avec_dispo = arbitres_avec_dispo.merge(
-                arbitres_df[[COLUMN_MAPPING['arbitres_affiliation'], 'Club', 'Nombre  de matchs à arbitrer']],
-                on=COLUMN_MAPPING['arbitres_affiliation'],
+                arbitres_df[[config.COLUMN_MAPPING['arbitres_affiliation'], 'Club', 'Nombre  de matchs à arbitrer']],
+                on=config.COLUMN_MAPPING['arbitres_affiliation'],
                 how='left'
             )
             
@@ -102,16 +79,15 @@ if not arbitres_df.empty:
             })
             
             grille_dispo = arbitres_avec_dispo.pivot_table(
-                index=[COLUMN_MAPPING['arbitres_nom'], COLUMN_MAPPING['arbitres_prenom'], 
-                      COLUMN_MAPPING['arbitres_categorie'], 'Club', 'Nbr matchs\nà arbitrer'],
+                index=[config.COLUMN_MAPPING['arbitres_nom'], config.COLUMN_MAPPING['arbitres_prenom'], 
+                      config.COLUMN_MAPPING['arbitres_categorie'], 'Club', 'Nbr matchs\nà arbitrer'],
                 columns='DATE_AFFICHAGE',
-                values=[COLUMN_MAPPING['dispo_disponibilite'], COLUMN_MAPPING['dispo_designation']],
+                values=[config.COLUMN_MAPPING['dispo_disponibilite'], config.COLUMN_MAPPING['dispo_designation']],
                 aggfunc='first'
             )
-            display_grille = grille_dispo[COLUMN_MAPPING['dispo_disponibilite']].fillna('Non renseigné')
+            display_grille = grille_dispo[config.COLUMN_MAPPING['dispo_disponibilite']].fillna('Non renseigné')
             ordered_columns = sorted(display_grille.columns, key=lambda x: datetime.strptime(x, '%d/%m/%Y'))
-            st.markdown("""
-                <style>
+            st.markdown("""                <style>
                     .stDataFrame {
                         width: 100%;
                     }
@@ -125,7 +101,7 @@ if not arbitres_df.empty:
                 display_grille[ordered_columns].style.apply(
                     highlight_designated_cells, 
                     grille_dispo=grille_dispo, 
-                    column_mapping=COLUMN_MAPPING, 
+                    column_mapping=config.COLUMN_MAPPING, 
                     axis=None
                 ),
                 height=600,

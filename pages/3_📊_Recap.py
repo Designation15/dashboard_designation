@@ -1,23 +1,11 @@
 import streamlit as st
 import pandas as pd
 
-# --- Configuration ---
-RENCONTRES_URL = "https://docs.google.com/spreadsheets/d/1I8RGfNNdaO1wlrtFgIOFbOnzpKszwJTxdyhQ7rRD1bg/export?format=xlsx"
-DESIGNATIONS_URL = "https://docs.google.com/spreadsheets/d/1gaPIT5477GOLNfTU0ITwbjNK1TjuO8q-yYN2YasDezg/export?format=xlsx"
-
-# --- Fonctions de chargement ---
-@st.cache_data(ttl=600)
-def load_data(url):
-    try:
-        df = pd.read_excel(url)
-        df.columns = df.columns.str.strip()
-        return df
-    except Exception as e:
-        st.error(f"Impossible de charger les données depuis {url}. Erreur: {e}")
-        return pd.DataFrame()
+# Importations centralisées
+from utils import load_data
+import config
 
 # --- Initialisation ---
-st.set_page_config(layout="wide")
 st.title("📊 Récapitulatif des Désignations")
 st.markdown("RS_OVALE2-024 - Vue consolidée de toutes les rencontres et des désignations manuelles associées.")
 
@@ -26,8 +14,8 @@ if st.button("Rafraîchir les Données", type="primary"):
     st.rerun()
 
 # --- Chargement des données ---
-rencontres_df = load_data(RENCONTRES_URL)
-designations_df = load_data(DESIGNATIONS_URL)
+rencontres_df = load_data(config.RENCONTRES_URL)
+designations_df = load_data(config.DESIGNATIONS_URL)
 
 # --- Pré-traitement et Fusion ---
 if not rencontres_df.empty:

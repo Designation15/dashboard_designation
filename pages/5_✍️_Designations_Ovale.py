@@ -1,21 +1,12 @@
 import streamlit as st
 import pandas as pd
 
-# --- Configuration et chargement des données ---
-RENCONTRES_FFR_URL = "https://docs.google.com/spreadsheets/d/1ViKipszuqE5LPbTcFk2QvmYq4ZNQZVs9LbzrUVC4p4Y/export?format=xlsx"
-
-@st.cache_data
-def load_data(url):
-    try:
-        df = pd.read_excel(url)
-        df.columns = df.columns.str.strip()
-        return df
-    except Exception as e:
-        st.error(f"Impossible de charger les données depuis {url}. Erreur: {e}")
-        return pd.DataFrame()
+# Importations centralisées
+from utils import load_data
+import config
 
 # --- Chargement des données ---
-rencontres_ffr_df = load_data(RENCONTRES_FFR_URL)
+rencontres_ffr_df = load_data(config.RENCONTRES_FFR_URL)
 
 # --- Application ---
 st.title("✍️ Designations Ovale")

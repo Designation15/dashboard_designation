@@ -1,48 +1,19 @@
 import streamlit as st
 import pandas as pd
 
-# --- Configuration et chargement des données ---
-RENCONTRES_FFR_URL = "https://docs.google.com/spreadsheets/d/1ViKipszuqE5LPbTcFk2QvmYq4ZNQZVs9LbzrUVC4p4Y/export?format=xlsx"
-ARBITRES_URL = "https://docs.google.com/spreadsheets/d/1bIUxD-GDc4V94nYoI_x2mEk0i_r9Xxnf02_Rn9YtoIc/export?format=xlsx"
-CLUB_URL = "https://docs.google.com/spreadsheets/d/1GLWS4jOmwv-AOtkFZ5-b5JcjaSpBVlwqcuOCRRmEVPQ/export?format=xlsx"
-
-@st.cache_data
-def load_static_data():
-    categories_data = {
-        'Niveau': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-        'CATEGORIE': [
-            'Internationaux', '2ème Division PRO', 'Nationale 1 et 2', 
-            'Arbitres assistants PRO', 'Arbitres assistants NAT', 'Divisionnaires 1', 
-            'Divisionnaires 2', 'Divisionnaires 3', 'Ligue 1', 'Ligue 2', 'Ligue 3', 
-            'Ligue 4', 'Ligue 5', 'Mineurs 17 ans', 'Mineurs 16 ans', 'Mineurs 15 ans'
-        ]
-    }
-    categories_df = pd.DataFrame(categories_data)
-    competitions_data = {
-        'NOM': [
-            'Elite 1 Féminine', 'Elite 2 Féminine', 'Elite Alamercery', 'Elite Crabos', 
-            'Espoirs Fédéraux', 'European Rugby Champions Cup', 'Excellence B - Championnat de France', 
-            'Fédérale 1', 'Fédérale 2', 'Fédérale 3', 'Fédérale B - Championnat de France', 
-            'Féminines Moins de 18 ans à XV - ELITE', 'Féminines Régionales à X', 
-            'Féminines Régionales à X « moins de 18 ans »', 'Régional 1 U16', 'Régional 1 U19', 
-            'Régional 2 U16', 'Régional 2 U19', 'Régional 3 U16', 'Régional 3 U19', 
-            'Régionale 1 - Championnat Territorial', 'Régionale 2 - Championnat Territorial', 
-            'Régionale 3 - Championnat Territorial', 'Réserves Elite', 
-            'Réserves Régionales 1 - Championnat Territorial', 'Réserves Régionales 2 - Championnat Territorial'
-        ],
-        'NIVEAU MIN': [6, 7, 7, 6, 6, 1, 9, 6, 7, 8, 9, 7, 13, 14, 15, 10, 15, 13, 15, 13, 9, 11, 13, 7, 11, 13],
-        'NIVEAU MAX': [4, 6, 6, 4, 4, 1, 7, 6, 7, 8, 7, 6, 10, 13, 9, 9, 9, 9, 9, 9, 7, 9, 9, 9, 9, 11]
-    }
-    competitions_df = pd.DataFrame(competitions_data)
-    competitions_df.rename(columns={'NOM': 'COMPETITION_NAME_FOR_MERGE'}, inplace=True)
-    return categories_df, competitions_df
+# Importations centralisées
+from utils import load_data
+import config
 
 @st.cache_data(ttl=300)
 def load_all_data():
-    rencontres_df = pd.read_excel(RENCONTRES_FFR_URL)
-    arbitres_df = pd.read_excel(ARBITRES_URL)
-    club_df = pd.read_excel(CLUB_URL)
-    categories_df, competitions_df = load_static_data()
+    """Charge et fusionne toutes les données nécessaires pour l'analyse FFR."""
+    rencontres_df = load_data(config.RENCONTRES_FFR_URL)
+    arbitres_df = load_data(config.ARBITRES_URL)
+    club_df = load_data(config.CLUB_URL)
+    categories_df = config.load_static_categories()
+    competitions_df = config.load_static_competitions()
+    competitions_df.rename(columns={'NOM': 'COMPETITION_NAME_FOR_MERGE'}, inplace=True)
     
     for df in [rencontres_df, arbitres_df, club_df]:
         df.columns = df.columns.str.strip()
@@ -117,7 +88,6 @@ def apply_styling(row):
 data_df = load_all_data()
 
 # --- Application ---
-st.set_page_config(layout="wide")
 st.title("✍️ Désignations FFR - Analyse Avancée")
 
 if not data_df.empty:
