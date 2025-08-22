@@ -48,14 +48,14 @@ if not rencontres_df.empty:
     st.header("Filtres")
     col1, col2 = st.columns(2)
     with col1:
-        competitions = ["Toutes"] + sorted(recap_df[config.COLUMN_MAPPING['rencontres_competition']].unique().tolist())
-        selected_competition = st.selectbox("Filtrer par compétition", options=competitions)
+        competitions = sorted(recap_df[config.COLUMN_MAPPING['rencontres_competition']].unique().tolist())
+        selected_competitions = st.multiselect("Filtrer par compétition", options=competitions, placeholder="Choisissez une ou plusieurs compétitions")
     with col2:
         search_term = st.text_input("Rechercher un club ou un arbitre", "")
 
     filtered_df = recap_df
-    if selected_competition != "Toutes":
-        filtered_df = filtered_df[filtered_df[config.COLUMN_MAPPING['rencontres_competition']] == selected_competition]
+    if selected_competitions:
+        filtered_df = filtered_df[filtered_df[config.COLUMN_MAPPING['rencontres_competition']].isin(selected_competitions)]
     if search_term:
         search_cols = [config.COLUMN_MAPPING['rencontres_locaux'], config.COLUMN_MAPPING['rencontres_visiteurs'], 'Arbitre Nom', 'Arbitre Prénom']
         mask = pd.concat([filtered_df[col].str.contains(search_term, case=False, na=False) for col in search_cols if col in filtered_df], axis=1).any(axis=1)
