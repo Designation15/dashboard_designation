@@ -8,6 +8,8 @@ from utils import (
     get_gspread_client,
     update_google_sheet,
     clear_sheet_except_header,
+    load_data,
+    get_gspread_client,
 )
 
 def get_edit_url_from_export_url(export_url):
@@ -58,8 +60,18 @@ if gc:
                 if st.button(f"Confirmer la mise à jour de '{data_type}'"):
                     with st.spinner(f"Mise à jour de la feuille '{data_type}' en cours..."):
                         if update_google_sheet(gc, selected_sheet_url, df_uploaded):
-                            st.success("Mise à jour terminée ! Les données devraient être à jour dans Google Sheets.")
-                            st.warning("N'oubliez pas de vider le cache de Streamlit (menu hamburger > Clear cache) si les données ne se rafraîchissent pas immédiatement dans les autres pages.")
+                            st.success("Mise à jour terminée ! Les données ont été actualisées dans Google Sheets.")
+                            
+                            # Vider le cache de la fonction de chargement des données
+                            load_data.clear()
+                            
+                            # Invalider le session_state pour forcer le rechargement
+                            st.session_state.data_loaded = False
+                            
+                            st.info("Les données ont été mises à jour. Cliquez sur le bouton ci-dessous pour rafraîchir l'application.")
+                            
+                            if st.button("🔄 Rafraîchir l'application"):
+                                st.rerun()
                         else:
                             st.error("La mise à jour a échoué. Veuillez vérifier les messages d'erreur ci-dessus.")
             except Exception as e:
@@ -73,7 +85,14 @@ if gc:
         with st.spinner("Effacement des données en cours..."):
             if clear_sheet_except_header(gc, designations_sheet_url):
                 st.success("Données de Désignations effacées avec succès !")
+                load_data.clear()
+                st.session_state.data_loaded = False
+                st.info("Les données ont été mises à jour. Cliquez sur le bouton ci-dessous pour rafraîchir l'application.")
+                if st.button("🔄 Rafraîchir l'application"):
+                    st.rerun()
             else:
                 st.error("L'effacement des données de Désignations a échoué.")
 else:
     st.warning("Impossible de se connecter à Google Sheets. Veuillez vérifier la configuration.")
+
+st.divider()
