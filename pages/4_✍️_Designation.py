@@ -212,8 +212,7 @@ with left_col:
     else:
         for _, rencontre in unique_matches_df.iterrows():
             with st.container(border=True):
-                if not selected_competitions:
-                    st.caption(rencontre[config.COLUMN_MAPPING['rencontres_competition']])
+                st.caption(rencontre[config.COLUMN_MAPPING['rencontres_competition']])
                 st.subheader(f"{rencontre[config.COLUMN_MAPPING['rencontres_locaux']]} vs {rencontre[config.COLUMN_MAPPING['rencontres_visiteurs']]}")
                 st.caption(f"{rencontre['rencontres_date_dt'].strftime('%d/%m/%Y')}")
                 roles = rencontre.get('ROLES', [])
