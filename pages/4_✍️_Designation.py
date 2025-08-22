@@ -189,12 +189,22 @@ else:
 left_col, right_col = st.columns([2, 3])
 with left_col:
     st.header("🗓️ Liste des Rencontres")
-    competition_options = ["Toutes"] + sorted(competitions_df[config.COLUMN_MAPPING['competitions_nom']].unique().tolist())
-    competition_nom = st.selectbox("Filtrer par compétition", options=competition_options)
-    if st.session_state.previous_competition != competition_nom:
+    competition_options = sorted(competitions_df[config.COLUMN_MAPPING['competitions_nom']].unique().tolist())
+    selected_competitions = st.multiselect(
+        "Filtrer par compétition", 
+        options=competition_options, 
+        placeholder="Choisissez une ou plusieurs compétitions"
+    )
+
+    # La logique de réinitialisation doit maintenant comparer des listes
+    if st.session_state.get('previous_competition') != selected_competitions:
         st.session_state.selected_match = None
-        st.session_state.previous_competition = competition_nom
-    rencontres_filtrees_df = rencontres_df[rencontres_df[config.COLUMN_MAPPING['rencontres_competition']] == competition_nom] if competition_nom != "Toutes" else rencontres_df
+        st.session_state.previous_competition = selected_competitions
+
+    if selected_competitions:
+        rencontres_filtrees_df = rencontres_df[rencontres_df[config.COLUMN_MAPPING['rencontres_competition']].isin(selected_competitions)]
+    else:
+        rencontres_filtrees_df = rencontres_df
     rencontres_filtrees_df = rencontres_filtrees_df.sort_values(by=['COMPETITION NOM', 'rencontres_date_dt'])
     unique_matches_df = rencontres_filtrees_df.drop_duplicates(subset=['RENCONTRE NUMERO'])
     if unique_matches_df.empty:
@@ -202,7 +212,8 @@ with left_col:
     else:
         for _, rencontre in unique_matches_df.iterrows():
             with st.container(border=True):
-                if competition_nom == "Toutes": st.caption(rencontre[config.COLUMN_MAPPING['rencontres_competition']])
+                if not selected_competitions:
+                    st.caption(rencontre[config.COLUMN_MAPPING['rencontres_competition']])
                 st.subheader(f"{rencontre[config.COLUMN_MAPPING['rencontres_locaux']]} vs {rencontre[config.COLUMN_MAPPING['rencontres_visiteurs']]}")
                 st.caption(f"{rencontre['rencontres_date_dt'].strftime('%d/%m/%Y')}")
                 roles = rencontre.get('ROLES', [])
