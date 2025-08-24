@@ -40,6 +40,63 @@ def initialize_data():
 
             st.session_state.data_loaded = True
 
+def display_data_tiles():
+    """Affiche des tuiles d'information sur les données chargées."""
+    st.subheader("📊 Informations sur les données")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    # Tuile pour RENCONTRES_URL
+    with col1:
+        df = st.session_state.rencontres_df
+        if not df.empty:
+            date_col = config.COLUMN_MAPPING['rencontres_date']
+            if date_col in df.columns:
+                dates = pd.to_datetime(df[date_col], errors='coerce')
+                min_date = dates.min()
+                max_date = dates.max()
+                st.metric(
+                    label="Rencontres",
+                    value=f"{len(df)} matchs",
+                    delta=f"{min_date.strftime('%d/%m/%Y')} - {max_date.strftime('%d/%m/%Y')}" if pd.notna(min_date) and pd.notna(max_date) else "Dates non disponibles"
+                )
+            else:
+                st.metric("Rencontres", f"{len(df)} matchs", "Colonne date manquante")
+        else:
+            st.metric("Rencontres", "0 match", "Données non chargées")
+    
+    # Tuile pour DESIGNATIONS_URL
+    with col2:
+        df = st.session_state.designations_df
+        if not df.empty:
+            matchs_uniques = df['RENCONTRE NUMERO'].nunique() if 'RENCONTRE NUMERO' in df.columns else 0
+            st.metric(
+                label="Désignations manuelles",
+                value=f"{len(df)} désignations",
+                delta=f"{matchs_uniques} matchs concernés"
+            )
+        else:
+            st.metric("Désignations manuelles", "0 désignation", "En attente de données")
+    
+    # Tuile pour DISPO_URL
+    with col3:
+        df = st.session_state.dispo_df
+        if not df.empty:
+            date_col = config.COLUMN_MAPPING['dispo_date']
+            if date_col in df.columns:
+                dates = pd.to_datetime(df[date_col], errors='coerce')
+                min_date = dates.min()
+                max_date = dates.max()
+                st.metric(
+                    label="Disponibilités",
+                    value=f"{len(df)} entrées",
+                    delta=f"{min_date.strftime('%d/%m/%Y')} - {max_date.strftime('%d/%m/%Y')}" if pd.notna(min_date) and pd.notna(max_date) else "Dates non disponibles"
+                )
+            else:
+                st.metric("Disponibilités", f"{len(df)} entrées", "Colonne date manquante")
+        else:
+            st.metric("Disponibilités", "0 entrée", "Données non chargées")
+
 # --- Configuration de la page et initialisation ---
 st.set_page_config(
     page_title="Aide à la Désignation d'Arbitres",
@@ -52,6 +109,11 @@ initialize_data()
 # --- Interface Principale ---
 st.title("Bienvenue dans l'outil d'aide à la désignation d'arbitres")
 st.write("Utilisez le menu sur la gauche pour naviguer entre les différentes pages.")
+
+# Afficher les tuiles d'information sur les données
+display_data_tiles()
+
+st.divider()
 
 if st.sidebar.button("🔄 Rafraîchir les données", help="Recharge toutes les données depuis les fichiers sources"):
     st.session_state.data_loaded = False
