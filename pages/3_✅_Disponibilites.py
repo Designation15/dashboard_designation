@@ -104,8 +104,8 @@ if not arbitres_df.empty:
                     column_mapping=config.COLUMN_MAPPING, 
                     axis=None
                 ),
-                height=600,
-                width=None  # None permet l'ajustement automatique à la largeur disponible
+                height=600
+                # width=None a été retiré car il cause une erreur dans certaines versions de Streamlit
             )
         else:
             st.info("Aucune disponibilité trouvée pour les filtres sélectionnés.")
