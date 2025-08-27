@@ -70,10 +70,25 @@ def display_data_tiles():
         df = st.session_state.designations_df
         if not df.empty:
             matchs_uniques = df['RENCONTRE NUMERO'].nunique() if 'RENCONTRE NUMERO' in df.columns else 0
+            
+            # Extraction des dates si la colonne DATE existe
+            date_info = ""
+            if 'DATE' in df.columns:
+                dates = pd.to_datetime(df['DATE'], errors='coerce', dayfirst=True)
+                valid_dates = dates.dropna()
+                if not valid_dates.empty:
+                    min_date = valid_dates.min()
+                    max_date = valid_dates.max()
+                    date_info = f"{min_date.strftime('%d/%m/%Y')} - {max_date.strftime('%d/%m/%Y')}"
+            
+            delta_text = f"{matchs_uniques} matchs"
+            if date_info:
+                delta_text = f"{date_info}"
+            
             st.metric(
                 label="Désignations manuelles",
                 value=f"{len(df)} désignations",
-                delta=f"{matchs_uniques} matchs concernés"
+                delta=delta_text
             )
         else:
             st.metric("Désignations manuelles", "0 désignation", "En attente de données")
