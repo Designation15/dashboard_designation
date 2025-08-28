@@ -56,7 +56,7 @@ def display_data_tiles():
                 min_date = dates.min()
                 max_date = dates.max()
                 st.metric(
-                    label="Rencontres",
+                    label="Rencontres-024",
                     value=f"{len(df)} matchs",
                     delta=f"{min_date.strftime('%d/%m/%Y')} - {max_date.strftime('%d/%m/%Y')}" if pd.notna(min_date) and pd.notna(max_date) else "Dates non disponibles"
                 )
@@ -103,7 +103,7 @@ def display_data_tiles():
                 min_date = dates.min()
                 max_date = dates.max()
                 st.metric(
-                    label="Disponibilités",
+                    label="Disponibilités-022",
                     value=f"{len(df)} entrées",
                     delta=f"{min_date.strftime('%d/%m/%Y')} - {max_date.strftime('%d/%m/%Y')}" if pd.notna(min_date) and pd.notna(max_date) else "Dates non disponibles"
                 )
