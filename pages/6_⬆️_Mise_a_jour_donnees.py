@@ -30,8 +30,8 @@ SHEET_URLS = {
     "Disponibilites-022": get_edit_url_from_export_url(config.DISPO_URL),
     "Arbitres-052": get_edit_url_from_export_url(config.ARBITRES_URL),
     "Clubs-007": get_edit_url_from_export_url(config.CLUB_URL),
-    "RencontresFFR-023": get_edit_url_from_export_url(config.RENCONTRES_FFR_URL),
-    "Designations": get_edit_url_from_export_url(config.DESIGNATIONS_URL),
+    "Rencontres-Ovale-023": get_edit_url_from_export_url(config.RENCONTRES_FFR_URL),
+   # "Designations": get_edit_url_from_export_url(config.DESIGNATIONS_URL),
 }
 
 # Connexion au client gspread
