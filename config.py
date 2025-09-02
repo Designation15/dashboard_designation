@@ -85,8 +85,38 @@ def load_static_categories():
 def load_static_competitions():
     """Charge le DataFrame des compétitions."""
     competitions_data = {
-        'NOM': ['Elite 1 Féminine', 'Elite 2 Féminine', 'Elite Alamercery', 'Elite Crabos', 'Espoirs Fédéraux', 'European Rugby Champions Cup', 'Excellence B - Championnat de France', 'Fédérale 1', 'Fédérale 2', 'Fédérale 3', 'Fédérale B - Championnat de France', 'Féminines Moins de 18 ans à XV - ELITE', 'Féminines Régionales à X', 'Féminines Régionales à X « moins de 18 ans »', 'Régional 1 U16', 'Régional 1 U19', 'Régional 2 U16', 'Régional 2 U19', 'Régional 3 U16', 'Régional 3 U19', 'Régionale 1 - Championnat Territorial', 'Régionale 2 - Championnat Territorial', 'Régionale 3 - Championnat Territorial', 'Réserves Elite', 'Réserves Régionales 1 - Championnat Territorial', 'Réserves Régionales 2 - Championnat Territorial'],
-        'NIVEAU MIN': [6, 7, 7, 6, 6, 1, 9, 6, 7, 8, 9, 7, 13, 14, 15, 10, 15, 13, 15, 13, 9, 11, 13, 7, 11, 13],
-        'NIVEAU MAX': [4, 6, 6, 4, 4, 1, 7, 6, 7, 8, 7, 6, 10, 13, 9, 9, 9, 9, 9, 9, 7, 9, 9, 9, 9, 11]
+        'NOM': [
+            'Elite 1 Féminine', 'Elite 2 Féminine', 'Elite Alamercery', 'Elite Crabos', 
+            'Espoirs Fédéraux', 'European Rugby Champions Cup', 'Excellence B - Championnat de France', 
+            'Fédérale 1', 'Fédérale 2', 'Fédérale 3', 'Fédérale B - Championnat de France', 
+            'Fédérale 1 Féminine', 'Fédérale 2 féminine', 'Fédérale 2 Féminine – IDF/HDF',
+            'Féminines Moins de 18 ans à XV - ELITE', 'Féminines Régionales à X', 
+            'Féminines Régionales à X « moins de 18 ans »', 'Gauderman', 'Loisirs', 'Matchs d\'échanges',
+            'National U16', 'National U18', 
+            'Régional 1 U16', 'Régional 1 U19', 'Régional 2 U16', 'Régional 2 U19', 
+            'Régional 3 U16', 'Régional 3 U19', 
+            'Régionale 1 - Championnat Territorial', 'Régionale 2 - Championnat Territorial', 
+            'Régionale 3 - Championnat Territorial', 
+            'Réserves Elite', 'Réserves Régionales 1 - Championnat Territorial', 
+            'Réserves Régionales 2 - Championnat Territorial', 'Réserves Régionales 3 - Championnat Territorial',
+            'Championnat Territorial des Clubs + 18 ans Féminin à 7', 
+            'Championnat Territorial des Clubs - 18 ans Féminin à 7'
+        ],
+        'NIVEAU MIN': [
+            6, 7, 7, 6, 6, 1, 9, 6, 7, 8, 9, 
+            6, 7, 7, 7, 13, 14, 8, 15, 15, 6, 6,
+            15, 10, 15, 13, 15, 13, 
+            9, 11, 13, 
+            7, 11, 13, 15,
+            13, 15
+        ],
+        'NIVEAU MAX': [
+            4, 6, 6, 4, 4, 1, 7, 6, 7, 8, 7, 
+            4, 6, 6, 6, 10, 13, 6, 9, 9, 4, 4,
+            9, 9, 9, 9, 9, 9, 
+            7, 9, 9, 
+            9, 9, 11, 9,
+            9, 9
+        ]
     }
     return pd.DataFrame(competitions_data)

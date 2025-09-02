@@ -190,9 +190,46 @@ left_col, right_col = st.columns([2, 3])
 with left_col:
     st.header("🗓️ Liste des Rencontres")
     competition_options = sorted(competitions_df[config.COLUMN_MAPPING['competitions_nom']].unique().tolist())
+    # Filtre par défaut des compétitions
+    competitions_par_defaut = [
+        "Fédérale 3",
+        "Espoirs Fédéraux",
+        "National U16",
+        "National U18",
+        "Gauderman",
+        "Excellence B - Championnat de France",
+        "Fédérale B - Championnat de France",
+        "Fédérale 1 Féminine",
+        "Fédérale 2 féminine",
+        "Fédérale 2 Féminine – IDF/HDF",
+        "Féminines Régionales à X",
+        "Régionale 1 - Championnat Territorial",
+        "Réserves Régionales 1 - Championnat Territorial",
+        "Régionale 2 - Championnat Territorial",
+        "Réserves Régionales 2 - Championnat Territorial",
+        "Régionale 3 - Championnat Territorial",
+        "Réserves Régionales 3 - Championnat Territorial",
+        "Régional 1 U19",
+        "Régional 2 U19",
+        "Régional 3 U19",
+        "Féminines Régionales à X « moins de 18 ans »",
+        "Féminines Moins de 18 ans à XV - ELITE",
+        "Régional 1 U16",
+        "Régional 2 U16",
+        "Régional 3 U16",
+        "Championnat Territorial des Clubs + 18 ans Féminin à 7",
+        "Championnat Territorial des Clubs - 18 ans Féminin à 7",
+        "Matchs d'échanges",
+        "Loisirs"
+    ]
+    
+    # Filtrer pour ne garder que les compétitions qui existent réellement
+    competitions_par_defaut_existantes = [comp for comp in competitions_par_defaut if comp in competition_options]
+    
     selected_competitions = st.multiselect(
         "Filtrer par compétition", 
         options=competition_options, 
+        default=competitions_par_defaut_existantes,
         placeholder="Choisissez une ou plusieurs compétitions"
     )
 
