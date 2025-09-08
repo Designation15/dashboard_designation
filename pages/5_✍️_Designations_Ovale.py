@@ -2,10 +2,16 @@ import streamlit as st
 import pandas as pd
 
 # Importations centralisées
-from utils import load_data
+from utils import load_data, get_designateur_actif_nom
 import config
 
+# --- Affichage du designateur ---
+designateur_nom = get_designateur_actif_nom()
+st.sidebar.markdown(f"### 👤 {designateur_nom}")
+st.sidebar.markdown("---")
+
 # --- Chargement des données ---
+
 rencontres_ffr_df = load_data(config.RENCONTRES_FFR_URL)
 
 # --- Application ---

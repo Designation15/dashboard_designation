@@ -1,24 +1,53 @@
 import streamlit as st
 import pandas as pd
 import config
-from utils import load_data, get_gspread_client, load_designations_from_sheets
+from utils import load_data, get_gspread_client, load_designations_from_sheets, get_designateur_actif_config, get_designateur_actif_nom
+
+def load_designateurs_config():
+    """Charge la configuration des designateurs depuis le fichier JSON."""
+    try:
+        import json
+        with open('designateurs_config.json', 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        st.error("Fichier de configuration des designateurs introuvable.")
+        return None
+    except json.JSONDecodeError:
+        st.error("Erreur de format dans le fichier de configuration des designateurs.")
+        return None
 
 def initialize_data():
     """Charge et pré-traite toutes les données une seule fois par session."""
     if 'data_loaded' not in st.session_state or not st.session_state.data_loaded:
         with st.spinner("Chargement et préparation des données..."):
+            # Charger la configuration des designateurs
+            config_data = load_designateurs_config()
+            if not config_data:
+                return
+            
+            # Récupérer le designateur actif configuré
+            designateur_config = get_designateur_actif_config()
+            if not designateur_config:
+                st.error("Configuration du designateur introuvable.")
+                return
+            
             gc = get_gspread_client()
             st.session_state.categories_df = config.load_static_categories()
             st.session_state.competitions_df = config.load_static_competitions()
-            st.session_state.rencontres_df = load_data(config.RENCONTRES_URL)
-            st.session_state.dispo_df = load_data(config.DISPO_URL)
-            st.session_state.arbitres_df = load_data(config.ARBITRES_URL)
-            st.session_state.club_df = load_data(config.CLUB_URL)
-            st.session_state.rencontres_ffr_df = load_data(config.RENCONTRES_FFR_URL)
             
-            designations_df = load_designations_from_sheets(gc, config.DESIGNATIONS_URL) if gc else pd.DataFrame()
+            # Charger les données spécifiques au designateur
+            st.session_state.rencontres_df = load_data(designateur_config['rencontres_url'])
+            st.session_state.dispo_df = load_data(designateur_config['dispo_url'])
+            st.session_state.rencontres_ffr_df = load_data(designateur_config['rencontres_ovale_url'])
+            
+            # Charger les données partagées
+            st.session_state.arbitres_df = load_data(config_data['fichiers_partages']['arbitres_url'])
+            st.session_state.club_df = load_data(config_data['fichiers_partages']['club_url'])
+            
+            # Charger les désignations du designateur
+            designations_df = load_designations_from_sheets(gc, designateur_config['designations_url']) if gc else pd.DataFrame()
             if designations_df.empty:
-                designations_df = load_data(config.DESIGNATIONS_URL)
+                designations_df = load_data(designateur_config['designations_url'])
             st.session_state.designations_df = designations_df
 
             # --- Pré-traitement centralisé ---
@@ -175,10 +204,18 @@ st.set_page_config(
     layout="wide"
 )
 
+# Récupérer le nom du designateur actif
+designateur_nom = get_designateur_actif_nom()
+
+# Afficher le nom du designateur en haut à gauche
+st.sidebar.markdown(f"### 👤 {designateur_nom}")
+st.sidebar.markdown("---")
+
 initialize_data()
 
 # --- Interface Principale ---
 st.title("Bienvenue dans l'outil d'aide à la désignation d'arbitres")
+st.write(f"Designateur : **{designateur_nom}**")
 st.write("Utilisez le menu sur la gauche pour naviguer entre les différentes pages.")
 
 # Afficher les tuiles d'information sur les données

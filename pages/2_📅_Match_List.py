@@ -1,8 +1,14 @@
 import streamlit as st
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder
+from utils import get_designateur_actif_nom
 
 import config
+
+# --- Affichage du designateur ---
+designateur_nom = get_designateur_actif_nom()
+st.sidebar.markdown(f"### 👤 {designateur_nom}")
+st.sidebar.markdown("---")
 
 # --- Récupération des données ---
 rencontres_df = st.session_state.get('rencontres_df', pd.DataFrame())

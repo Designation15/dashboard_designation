@@ -3,8 +3,13 @@ import pandas as pd
 import numpy as np
 
 # Importations centralisées
-from utils import load_data
+from utils import load_data, get_designateur_actif_nom
 import config
+
+# --- Affichage du designateur ---
+designateur_nom = get_designateur_actif_nom()
+st.sidebar.markdown(f"### 👤 {designateur_nom}")
+st.sidebar.markdown("---")
 
 @st.cache_data(ttl=300)
 def load_all_data():

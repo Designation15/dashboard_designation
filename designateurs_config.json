@@ -1,0 +1,23 @@
+{
+  "designateur_actif": "designateur_2",
+  "designateurs": {
+    "designateur_1": {
+      "nom": "Designateur1",
+      "rencontres_url": "https://docs.google.com/spreadsheets/d/1Y5ocs0vurOKASiIRFw9CF5ZN-7eOeuggfIPWppaeyDs/edit",
+      "dispo_url": "https://docs.google.com/spreadsheets/d/1WBPcRhxhCnpJmdEiImryj2reDYY8hOKd-X-fQLXV4F8/edit",
+      "rencontres_ovale_url": "https://docs.google.com/spreadsheets/d/1JIQPfdyVCzQTauDWcH1DAHrs2daQqWpcYAfJVuQ_Jws/edit",
+      "designations_url": "https://docs.google.com/spreadsheets/d/1QtYjLVg0IQ2i_hjmOjVBCFwCJKcfdugFj7UWVpGjQIk/edit"
+    },
+    "designateur_2": {
+      "nom": "Designateur2",
+      "rencontres_url": "https://docs.google.com/spreadsheets/d/1na2jXpL-jcOaYhav8buSNTAHEQDi1Q9ULHQNAE-PNCQ/edit",
+      "dispo_url": "https://docs.google.com/spreadsheets/d/1OAj-7-cNZIwn0w0548n5g5DeRHZxuRgfO28iuuLue6A/edit",
+      "rencontres_ovale_url": "https://docs.google.com/spreadsheets/d/1DISY9AiojRKdyQTRi02J5xKbR3TA_XyC2SzO0RYeO3Q/edit",
+      "designations_url": "https://docs.google.com/spreadsheets/d/161kJhhX0jWtOjPy3ETveDP2tboPGs-TiqWh-zjiZbys/edit"
+    }
+  },
+  "fichiers_partages": {
+    "arbitres_url": "https://docs.google.com/spreadsheets/d/1bIUxD-GDc4V94nYoI_x2mEk0i_r9Xxnf02_Rn9YtoIc/edit",
+    "club_url": "https://docs.google.com/spreadsheets/d/1GLWS4jOmwv-AOtkFZ5-b5JcjaSpBVlwqcuOCRRmEVPQ/edit"
+  }
+}

@@ -10,10 +10,17 @@ import config
 @st.cache_data
 def load_data(url):
     """
-    Charge des données depuis une URL Excel, avec gestion du cache et des erreurs.
+    Charge des données depuis une URL Google Sheets, avec gestion du cache et des erreurs.
     """
     try:
-        df = pd.read_excel(url)
+        # Convertir l'URL d'édition en URL d'export
+        if '/edit' in url:
+            sheet_id = url.split('/d/')[1].split('/')[0]
+            export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=xlsx"
+        else:
+            export_url = url
+            
+        df = pd.read_excel(export_url)
         df.columns = df.columns.str.strip()
         return df
     except Exception as e:
@@ -54,6 +61,38 @@ def enregistrer_designation(client, designation_url, rencontre_details, arbitre_
     except Exception as e:
         st.error(f"Erreur Google Sheets : {e}")
         return False
+
+def get_designateur_actif_config():
+    """Récupère la configuration du designateur actif."""
+    try:
+        import json
+        with open('designateurs_config.json', 'r') as f:
+            config_data = json.load(f)
+        
+        designateur_id = config_data.get('designateur_actif', 'designateur_1')
+        if designateur_id in config_data['designateurs']:
+            return config_data['designateurs'][designateur_id]
+        return None
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
+        return None
+
+def get_designateur_designations_url():
+    """Retourne l'URL des désignations pour le designateur actif configuré."""
+    designateur_config = get_designateur_actif_config()
+    if designateur_config:
+        return designateur_config['designations_url']
+    else:
+        # Fallback vers l'URL originale en cas d'erreur
+        import config
+        return config.DESIGNATIONS_URL
+
+def get_designateur_actif_nom():
+    """Retourne le nom du designateur actif configuré."""
+    designateur_config = get_designateur_actif_config()
+    if designateur_config:
+        return designateur_config['nom']
+    else:
+        return "Designateur inconnu"
 
 def load_designations_from_sheets(client, designation_url):
     try:

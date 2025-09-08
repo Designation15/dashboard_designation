@@ -11,6 +11,8 @@ from utils import (
     get_arbitre_status_for_date,
     get_department_from_club_name_or_code,
     extract_club_code_from_team_string,
+    get_designateur_actif_nom,
+    get_designateur_actif_config,
 )
 
 # --- Fonctions d'affichage de l'UI ---
@@ -48,7 +50,9 @@ def display_current_designations(rencontre_details, designations_combinees_df, d
                     if st.button("Vraiment Supprimer ?", key=button_key, type="primary"):
                         try:
                             if gc:
-                                spreadsheet = gc.open_by_url(config.DESIGNATIONS_URL)
+                                from utils import get_designateur_designations_url
+                                designations_url = get_designateur_designations_url()
+                                spreadsheet = gc.open_by_url(designations_url)
                                 worksheet = spreadsheet.get_worksheet(0)
                                 records = worksheet.get_all_records()
                                 row_to_delete = -1
@@ -135,7 +139,9 @@ def display_referee_finder(rencontre_details, arbitres_df, club_df, categories_d
                         selected_role = st.selectbox("Rôle", options=roles_disponibles, key=f"role_{key_suffix}", label_visibility="collapsed")
                         if st.button("Valider", key=f"designate_{key_suffix}", use_container_width=True):
                             if gc:
-                                success = enregistrer_designation(gc, config.DESIGNATIONS_URL, rencontre_details, arbitre, dpt_locaux, selected_role)
+                                from utils import get_designateur_designations_url
+                                designations_url = get_designateur_designations_url()
+                                success = enregistrer_designation(gc, designations_url, rencontre_details, arbitre, dpt_locaux, selected_role)
                                 if success:
                                     st.toast("Désignation enregistrée !", icon="✅")
                                     st.cache_data.clear()
@@ -145,21 +151,36 @@ def display_referee_finder(rencontre_details, arbitres_df, club_df, categories_d
                 else:
                     st.warning(status_text, icon="⚠️")
 
+# --- Affichage du designateur ---
+designateur_nom = get_designateur_actif_nom()
+st.sidebar.markdown(f"### 👤 {designateur_nom}")
+st.sidebar.markdown("---")
+
 # --- Initialisation & Chargement ---
 st.title("✍️ Outil de Désignation Interactif")
 if 'selected_match' not in st.session_state: st.session_state.selected_match = None
 if 'previous_competition' not in st.session_state: st.session_state.previous_competition = None
+
+# Charger les données depuis la session
 gc = get_gspread_client()
-categories_df = config.load_static_categories()
-competitions_df = config.load_static_competitions()
-rencontres_df = load_data(config.RENCONTRES_URL)
-designations_df = load_designations_from_sheets(gc, config.DESIGNATIONS_URL) if gc else pd.DataFrame()
-if designations_df.empty:
-    designations_df = load_data(config.DESIGNATIONS_URL)
-rencontres_ffr_df = load_data(config.RENCONTRES_FFR_URL)
-dispo_df = load_data(config.DISPO_URL)
-arbitres_df = load_data(config.ARBITRES_URL)
-club_df = load_data(config.CLUB_URL)
+categories_df = st.session_state.get('categories_df', config.load_static_categories())
+competitions_df = st.session_state.get('competitions_df', config.load_static_competitions())
+rencontres_df = st.session_state.get('rencontres_df', pd.DataFrame())
+dispo_df = st.session_state.get('dispo_df', pd.DataFrame())
+arbitres_df = st.session_state.get('arbitres_df', pd.DataFrame())
+club_df = st.session_state.get('club_df', pd.DataFrame())
+
+# Charger les désignations du designateur actif
+designateur_config = get_designateur_actif_config()
+if designateur_config:
+    designations_df = load_designations_from_sheets(gc, designateur_config['designations_url']) if gc else pd.DataFrame()
+    if designations_df.empty:
+        designations_df = load_data(designateur_config['designations_url'])
+    rencontres_ffr_df = load_data(designateur_config['rencontres_ovale_url'])
+else:
+    # Fallback
+    designations_df = pd.DataFrame()
+    rencontres_ffr_df = pd.DataFrame()
 
 # --- Pré-traitement des données ---
 for df in [rencontres_df, rencontres_ffr_df, designations_df]:

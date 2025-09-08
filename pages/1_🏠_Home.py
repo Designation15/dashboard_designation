@@ -1,9 +1,15 @@
 import streamlit as st
+from utils import get_designateur_actif_nom
 import pandas as pd
 from datetime import datetime
 import altair as alt
 
 import config
+
+# --- Affichage du designateur ---
+designateur_nom = get_designateur_actif_nom()
+st.sidebar.markdown(f"### 👤 {designateur_nom}")
+st.sidebar.markdown("---")
 
 st.title("🏠 Tableau de Bord Principal")
 st.markdown("Vue de l'activité et des désignations à venir.")

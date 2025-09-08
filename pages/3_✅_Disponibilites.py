@@ -3,10 +3,16 @@ import pandas as pd
 from datetime import datetime
 
 # Importations centralisées
-from utils import highlight_designated_cells, load_data
+from utils import highlight_designated_cells, load_data, get_designateur_actif_nom
 import config
 
+# --- Affichage du designateur ---
+designateur_nom = get_designateur_actif_nom()
+st.sidebar.markdown(f"### 👤 {designateur_nom}")
+st.sidebar.markdown("---")
+
 # --- Chargement des données ---
+
 arbitres_df = load_data(config.ARBITRES_URL)
 dispo_df = load_data(config.DISPO_URL)
 

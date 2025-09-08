@@ -1,9 +1,15 @@
 import streamlit as st
+from utils import get_designateur_actif_nom
 import pandas as pd
 
 import config
 
 # --- Récupération des données ---
+# --- Affichage du designateur ---
+designateur_nom = get_designateur_actif_nom()
+st.sidebar.markdown(f"### 👤 {designateur_nom}")
+st.sidebar.markdown("---")
+
 rencontres_df = st.session_state.get('rencontres_df', pd.DataFrame()).copy()
 designations_df = st.session_state.get('designations_df', pd.DataFrame()).copy()
 
