@@ -175,8 +175,8 @@ if ffr_cols.issubset(rencontres_ffr_df.columns) and manual_cols.issubset(designa
     designations_combinees_df = pd.concat([rencontres_ffr_df[list(ffr_cols)], designations_df[list(manual_cols)]], ignore_index=True)
 else:
     designations_combinees_df = pd.DataFrame(columns=list(ffr_cols))
-if 'rencontres_date_dt' not in rencontres_df.columns: rencontres_df['rencontres_date_dt'] = pd.to_datetime(rencontres_df["DATE EFFECTIVE"], errors='coerce', dayfirst=True)
-if 'DATE_dt' not in dispo_df.columns: dispo_df['DATE_dt'] = pd.to_datetime(dispo_df['DATE'], errors='coerce', dayfirst=True)
+if 'rencontres_date_dt' not in rencontres_df.columns: rencontres_df['rencontres_date_dt'] = pd.to_datetime(rencontres_df["DATE EFFECTIVE"], errors='coerce')
+if 'DATE_dt' not in dispo_df.columns: dispo_df['DATE_dt'] = pd.to_datetime(dispo_df['DATE'], errors='coerce')
 if 'RENCONTRE NUMERO' in designations_combinees_df.columns and 'FONCTION ARBITRE' in designations_combinees_df.columns:
     roles_par_match = designations_combinees_df.groupby('RENCONTRE NUMERO')['FONCTION ARBITRE'].apply(list).reset_index()
     roles_par_match.rename(columns={'FONCTION ARBITRE': 'ROLES'}, inplace=True)

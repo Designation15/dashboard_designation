@@ -48,7 +48,7 @@ if not rencontres_df.empty:
     st.header("Filtres")
     col1, col2 = st.columns(2)
     with col1:
-        competitions = sorted(recap_df[config.COLUMN_MAPPING['rencontres_competition']].unique().tolist())
+        competitions = sorted([str(comp) for comp in recap_df[config.COLUMN_MAPPING['rencontres_competition']].unique().tolist()])
         selected_competitions = st.multiselect("Filtrer par compétition", options=competitions, placeholder="Choisissez une ou plusieurs compétitions")
     with col2:
         search_term = st.text_input("Rechercher un club ou un arbitre", "")
