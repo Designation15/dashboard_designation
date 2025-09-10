@@ -8,7 +8,7 @@ rencontres_df = st.session_state.get('rencontres_df', pd.DataFrame()).copy()
 designations_df = st.session_state.get('designations_df', pd.DataFrame()).copy()
 
 st.title("📊 Récapitulatif des Désignations")
-st.markdown("RS_OVALE2-024 - Vue consolidée de toutes les rencontres et des désignations manuelles associées.")
+st.markdown("RS_OVALE2-024 - Vue filtrée  de toutes les rencontres a designées.")
 
 if not rencontres_df.empty:
     # --- Pré-traitement et Fusion ---
@@ -44,22 +44,48 @@ if not rencontres_df.empty:
     if config.COLUMN_MAPPING['rencontres_date'] in recap_df.columns:
         recap_df[config.COLUMN_MAPPING['rencontres_date']] = pd.to_datetime(recap_df[config.COLUMN_MAPPING['rencontres_date']], errors='coerce').dt.strftime('%d/%m/%Y %H:%M')
 
-    # --- Filtres ---
-    st.header("Filtres")
-    col1, col2 = st.columns(2)
-    with col1:
-        competitions = sorted([str(comp) for comp in recap_df[config.COLUMN_MAPPING['rencontres_competition']].unique().tolist()])
-        selected_competitions = st.multiselect("Filtrer par compétition", options=competitions, placeholder="Choisissez une ou plusieurs compétitions")
-    with col2:
-        search_term = st.text_input("Rechercher un club ou un arbitre", "")
-
+    # --- Filtre par défaut ---
+    st.header("Filtre")
+    
+    # Liste des compétitions à filtrer par défaut
+    competitions_filtre_defaut = [
+        "Fédérale 3",
+        "Espoirs Fédéraux",
+        "National U16",
+        "National U18",
+        "Gauderman",
+        "Excellence B - Championnat de France",
+        "Fédérale B - Championnat de France",
+        "Fédérale 1 Féminine",
+        "Fédérale 2 féminine",
+        "Fédérale 2 Féminine – IDF/HDF",
+        "Féminines Régionales à X",
+        "Régionale 1 - Championnat Territorial",
+        "Réserves Régionales 1 - Championnat Territorial",
+        "Régionale 2 - Championnat Territorial",
+        "Réserves Régionales 2 - Championnat Territorial",
+        "Régionale 3 - Championnat Territorial",
+        "Réserves Régionales 3 - Championnat Territorial",
+        "Régional 1 U19",
+        "Régional 2 U19",
+        "Régional 3 U19",
+        "Féminines Régionales à X « moins de 18 ans »",
+        "Féminines Moins de 18 ans à XV - ELITE",
+        "Régional 1 U16",
+        "Régional 2 U16",
+        "Régional 3 U16",
+        "Championnat Territorial des Clubs + 18 ans Féminin à 7",
+        "Championnat Territorial des Clubs - 18 ans Féminin à 7",
+        "Matchs d'échanges",
+        "Loisirs"
+    ]
+    
+    # Bouton toggle pour activer/désactiver le filtre par défaut
+    filtre_actif = st.checkbox("Activer le filtre par compétitions", value=True)
+    
     filtered_df = recap_df
-    if selected_competitions:
-        filtered_df = filtered_df[filtered_df[config.COLUMN_MAPPING['rencontres_competition']].isin(selected_competitions)]
-    if search_term:
-        search_cols = [config.COLUMN_MAPPING['rencontres_locaux'], config.COLUMN_MAPPING['rencontres_visiteurs'], 'Arbitre Nom', 'Arbitre Prénom']
-        mask = pd.concat([filtered_df[col].str.contains(search_term, case=False, na=False) for col in search_cols if col in filtered_df], axis=1).any(axis=1)
-        filtered_df = filtered_df[mask]
+    if filtre_actif:
+        filtered_df = filtered_df[filtered_df[config.COLUMN_MAPPING['rencontres_competition']].isin(competitions_filtre_defaut)]
 
     st.divider()
 
