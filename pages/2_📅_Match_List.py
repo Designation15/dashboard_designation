@@ -14,33 +14,44 @@ st.markdown("RS_OVALE2-024 - Vue consolidée de toutes les rencontres")
 if not rencontres_df.empty and 'rencontres_date_dt' in rencontres_df.columns:
     rencontres_filtrees = rencontres_df.copy()
 
-    st.sidebar.header("Filtres Rencontres")
+    # Liste des compétitions à filtrer par défaut
+    competitions_filtre_defaut = [
+        "Fédérale 3",
+        "Espoirs Fédéraux",
+        "National U16",
+        "National U18",
+        "Gauderman",
+        "Excellence B - Championnat de France",
+        "Fédérale B - Championnat de France",
+        "Fédérale 1 Féminine",
+        "Fédérale 2 féminine",
+        "Fédérale 2 Féminine – IDF/HDF",
+        "Féminines Régionales à X",
+        "Régionale 1 - Championnat Territorial",
+        "Réserves Régionales 1 - Championnat Territorial",
+        "Régionale 2 - Championnat Territorial",
+        "Réserves Régionales 2 - Championnat Territorial",
+        "Régionale 3 - Championnat Territorial",
+        "Réserves Régionales 3 - Championnat Territorial",
+        "Régional 1 U19",
+        "Régional 2 U19",
+        "Régional 3 U19",
+        "Féminines Régionales à X « moins de 18 ans »",
+        "Féminines Moins de 18 ans à XV - ELITE",
+        "Régional 1 U16",
+        "Régional 2 U16",
+        "Régional 3 U16",
+        "Championnat Territorial des Clubs + 18 ans Féminin à 7",
+        "Championnat Territorial des Clubs - 18 ans Féminin à 7",
+        "Matchs d'échanges",
+        "Loisirs"
+    ]
     
-    min_df_date = rencontres_filtrees['rencontres_date_dt'].min().date()
-    max_df_date = rencontres_filtrees['rencontres_date_dt'].max().date()
+    # Bouton toggle pour activer/désactiver le filtre par défaut
+    filtre_actif = st.checkbox("Activer le filtre par compétitions", value=True)
     
-    selected_date_range = st.sidebar.date_input(
-        "Filtrer par date",
-        value=(min_df_date, max_df_date),
-        min_value=min_df_date,
-        max_value=max_df_date
-    )
-
-    if len(selected_date_range) == 2:
-        start_date, end_date = selected_date_range
-        rencontres_filtrees = rencontres_filtrees[
-            (rencontres_filtrees['rencontres_date_dt'].dt.date >= start_date) &
-            (rencontres_filtrees['rencontres_date_dt'].dt.date <= end_date)
-        ]
-    
-    all_competitions = ["Toutes"] + list(competitions_df[config.COLUMN_MAPPING['competitions_nom']].unique())
-    selected_competition = st.sidebar.selectbox(
-        "Filtrer par compétition",
-        options=all_competitions
-    )
-
-    if selected_competition != "Toutes":
-        rencontres_filtrees = rencontres_filtrees[rencontres_filtrees[config.COLUMN_MAPPING['rencontres_competition']] == selected_competition]
+    if filtre_actif:
+        rencontres_filtrees = rencontres_filtrees[rencontres_filtrees[config.COLUMN_MAPPING['rencontres_competition']].isin(competitions_filtre_defaut)]
 
     if not rencontres_filtrees.empty:
         cols_to_display = [

@@ -13,26 +13,70 @@ rencontres_df = st.session_state.get('rencontres_df', pd.DataFrame())
 arbitres_df = st.session_state.get('arbitres_df', pd.DataFrame())
 dispo_df = st.session_state.get('dispo_df', pd.DataFrame())
 
+# --- Filtre par défaut ---
+st.header("Filtre")
+
+# Liste des compétitions à filtrer par défaut
+competitions_filtre_defaut = [
+    "Fédérale 3",
+    "Espoirs Fédéraux",
+    "National U16",
+    "National U18",
+    "Gauderman",
+    "Excellence B - Championnat de France",
+    "Fédérale B - Championnat de France",
+    "Fédérale 1 Féminine",
+    "Fédérale 2 féminine",
+    "Fédérale 2 Féminine – IDF/HDF",
+    "Féminines Régionales à X",
+    "Régionale 1 - Championnat Territorial",
+    "Réserves Régionales 1 - Championnat Territorial",
+    "Régionale 2 - Championnat Territorial",
+    "Réserves Régionales 2 - Championnat Territorial",
+    "Régionale 3 - Championnat Territorial",
+    "Réserves Régionales 3 - Championnat Territorial",
+    "Régional 1 U19",
+    "Régional 2 U19",
+    "Régional 3 U19",
+    "Féminines Régionales à X « moins de 18 ans »",
+    "Féminines Moins de 18 ans à XV - ELITE",
+    "Régional 1 U16",
+    "Régional 2 U16",
+    "Régional 3 U16",
+    "Championnat Territorial des Clubs + 18 ans Féminin à 7",
+    "Championnat Territorial des Clubs - 18 ans Féminin à 7",
+    "Matchs d'échanges",
+    "Loisirs"
+]
+
+# Bouton toggle pour activer/désactiver le filtre par défaut
+filtre_actif = st.checkbox("Activer le filtre par compétitions", value=True)
+
+# Application du filtre aux données
+rencontres_filtrees_df = rencontres_df
+if filtre_actif and not rencontres_df.empty and config.COLUMN_MAPPING['rencontres_competition'] in rencontres_df.columns:
+    rencontres_filtrees_df = rencontres_df[rencontres_df[config.COLUMN_MAPPING['rencontres_competition']].isin(competitions_filtre_defaut)]
+
 # --- Affichage des métriques ---
 
 st.header("Statistiques Clés")
 
 # Alerte si des dates sont antérieures à la date du jour
-if not rencontres_df.empty and 'rencontres_date_dt' in rencontres_df.columns:
-    min_rencontre_file_date = rencontres_df['rencontres_date_dt'].min().strftime('%d/%m/%Y')
-    max_rencontre_file_date = rencontres_df['rencontres_date_dt'].max().strftime('%d/%m/%Y')
+if not rencontres_filtrees_df.empty and 'rencontres_date_dt' in rencontres_filtrees_df.columns:
+    min_rencontre_file_date = rencontres_filtrees_df['rencontres_date_dt'].min().strftime('%d/%m/%Y')
+    max_rencontre_file_date = rencontres_filtrees_df['rencontres_date_dt'].max().strftime('%d/%m/%Y')
     today = pd.to_datetime(datetime.now().date())
-    if (rencontres_df['rencontres_date_dt'] < today).any():
+    if (rencontres_filtrees_df['rencontres_date_dt'] < today).any():
         st.warning(f"⚠️ Attention : Certaines rencontres sont antérieures à la date du jour. Le fichier couvre du {min_rencontre_file_date} au {max_rencontre_file_date}. Pensez à mettre à jour vos données !", icon="🚨")
 
-total_rencontres = len(rencontres_df)
+total_rencontres = len(rencontres_filtrees_df)
 total_arbitres = len(arbitres_df)
 available_referees_count = 0
 
 # Calcul des arbitres disponibles
-if not rencontres_df.empty and not dispo_df.empty and 'rencontres_date_dt' in rencontres_df.columns and 'DATE_dt' in dispo_df.columns:
-    min_rencontre_date = rencontres_df['rencontres_date_dt'].min()
-    max_rencontre_date = rencontres_df['rencontres_date_dt'].max()
+if not rencontres_filtrees_df.empty and not dispo_df.empty and 'rencontres_date_dt' in rencontres_filtrees_df.columns and 'DATE_dt' in dispo_df.columns:
+    min_rencontre_date = rencontres_filtrees_df['rencontres_date_dt'].min()
+    max_rencontre_date = rencontres_filtrees_df['rencontres_date_dt'].max()
     
     filtered_dispo = dispo_df[
         (dispo_df['DATE_dt'] >= min_rencontre_date) & 
@@ -51,9 +95,9 @@ st.divider()
 # --- Prochaines Rencontres à Désigner ---
 st.header("⚡ Prochaines Rencontres à Désigner")
 
-if not rencontres_df.empty and 'rencontres_date_dt' in rencontres_df.columns:
+if not rencontres_filtrees_df.empty and 'rencontres_date_dt' in rencontres_filtrees_df.columns:
     today = pd.to_datetime(datetime.now().date())
-    prochaines_rencontres = rencontres_df[rencontres_df['rencontres_date_dt'] >= today].copy()
+    prochaines_rencontres = rencontres_filtrees_df[rencontres_filtrees_df['rencontres_date_dt'] >= today].copy()
 
     if not prochaines_rencontres.empty:
         prochaines_rencontres = prochaines_rencontres.sort_values(by='rencontres_date_dt')
@@ -73,8 +117,8 @@ else:
 st.divider()
 
 st.header("📊 Nombre de Rencontres par Jour (toutes dates)")
-if not rencontres_df.empty and 'rencontres_date_dt' in rencontres_df.columns:
-    rencontres_par_jour = rencontres_df.groupby(rencontres_df['rencontres_date_dt'].dt.date).size().reset_index(name='Nombre de Rencontres')
+if not rencontres_filtrees_df.empty and 'rencontres_date_dt' in rencontres_filtrees_df.columns:
+    rencontres_par_jour = rencontres_filtrees_df.groupby(rencontres_filtrees_df['rencontres_date_dt'].dt.date).size().reset_index(name='Nombre de Rencontres')
     rencontres_par_jour.columns = ['Date', 'Nombre de Rencontres']
     rencontres_par_jour['Date_dt'] = pd.to_datetime(rencontres_par_jour['Date'])
     rencontres_par_jour['Date'] = rencontres_par_jour['Date_dt'].dt.strftime('%d/%m/%Y')
