@@ -73,6 +73,39 @@ ROLE_ICONS = {
 ALL_ROLES = ["Arbitre de champ", "Arbitre Assistant 1", "Arbitre Assistant 2"]
 
 
+# --- Liste des compétitions à filtrer par défaut ---
+COMPETITIONS_FILTRE_DEFAUT = [
+    "Fédérale 3",
+    "Espoirs Fédéraux",
+    "National U16",
+    "National U18",
+    "Gauderman",
+    "Excellence B - Championnat de France",
+    "Fédérale B - Championnat de France",
+    "Fédérale 1 Féminine",
+    "Fédérale 2 féminine",
+    "Fédérale 2 Féminine – IDF/HDF",
+    "Féminines Régionales à X",
+    "Régionale 1 - Championnat Territorial",
+    "Réserves Régionales 1 - Championnat Territorial",
+    "Régionale 2 - Championnat Territorial",
+    "Réserves Régionales 2 - Championnat Territorial",
+    "Régionale 3 - Championnat Territorial",
+    "Réserves Régionales 3 - Championnat Territorial",
+    "Régional 1 U19",
+    "Régional 2 U19",
+    "Régional 3 U19",
+    "Féminines Régionales à X « moins de 18 ans »",
+    "Féminines Moins de 18 ans à XV - ELITE",
+    "Régional 1 U16",
+    "Régional 2 U16",
+    "Régional 3 U16",
+    "Championnat Territorial des Clubs + 18 ans Féminin à 7",
+    "Championnat Territorial des Clubs - 18 ans Féminin à 7",
+    "Matchs d'échanges",
+    "Loisirs"
+]
+
 # --- Données Statiques ---
 def load_static_categories():
     """Charge le DataFrame des catégories d'arbitres."""

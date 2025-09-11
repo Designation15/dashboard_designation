@@ -16,38 +16,8 @@ dispo_df = st.session_state.get('dispo_df', pd.DataFrame())
 # --- Filtre par défaut ---
 st.header("Filtre")
 
-# Liste des compétitions à filtrer par défaut
-competitions_filtre_defaut = [
-    "Fédérale 3",
-    "Espoirs Fédéraux",
-    "National U16",
-    "National U18",
-    "Gauderman",
-    "Excellence B - Championnat de France",
-    "Fédérale B - Championnat de France",
-    "Fédérale 1 Féminine",
-    "Fédérale 2 féminine",
-    "Fédérale 2 Féminine – IDF/HDF",
-    "Féminines Régionales à X",
-    "Régionale 1 - Championnat Territorial",
-    "Réserves Régionales 1 - Championnat Territorial",
-    "Régionale 2 - Championnat Territorial",
-    "Réserves Régionales 2 - Championnat Territorial",
-    "Régionale 3 - Championnat Territorial",
-    "Réserves Régionales 3 - Championnat Territorial",
-    "Régional 1 U19",
-    "Régional 2 U19",
-    "Régional 3 U19",
-    "Féminines Régionales à X « moins de 18 ans »",
-    "Féminines Moins de 18 ans à XV - ELITE",
-    "Régional 1 U16",
-    "Régional 2 U16",
-    "Régional 3 U16",
-    "Championnat Territorial des Clubs + 18 ans Féminin à 7",
-    "Championnat Territorial des Clubs - 18 ans Féminin à 7",
-    "Matchs d'échanges",
-    "Loisirs"
-]
+# Utilisation de la liste centralisée depuis config.py
+competitions_filtre_defaut = config.COMPETITIONS_FILTRE_DEFAUT
 
 # Bouton toggle pour activer/désactiver le filtre par défaut
 filtre_actif = st.checkbox("Activer le filtre par compétitions", value=True)
