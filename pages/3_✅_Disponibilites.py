@@ -85,7 +85,9 @@ if not arbitres_df.empty:
                 values=[config.COLUMN_MAPPING['dispo_disponibilite'], config.COLUMN_MAPPING['dispo_designation']],
                 aggfunc='first'
             )
+            # Remplacer "OUI" et "NON" par des chaînes vides, garder "Non renseigné" pour les valeurs manquantes
             display_grille = grille_dispo[config.COLUMN_MAPPING['dispo_disponibilite']].fillna('Non renseigné')
+            display_grille = display_grille.replace({'OUI': '', 'NON': ''})
             ordered_columns = sorted(display_grille.columns, key=lambda x: datetime.strptime(x, '%d/%m/%Y'))
             st.markdown("""                <style>
                     .stDataFrame {

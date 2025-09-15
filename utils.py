@@ -245,7 +245,10 @@ def get_cp_from_club_name_or_code(club_name_full, club_df, column_mapping):
 
 def highlight_designated_cells(df_to_style, grille_dispo, column_mapping):
     """
-    Met en évidence les cellules où des arbitres sont désignés
+    Met en évidence les cellules selon la disponibilité et les désignations
+    - Fond vert pour les disponibilités "OUI"
+    - Fond rouge pour les disponibilités "NON" 
+    - Icône 🏈 pour les arbitres désignés (qui ont un match)
     """
     # Crée une matrice de style vide de la même taille que le df à styler.
     style_matrix = pd.DataFrame('', index=df_to_style.index, columns=df_to_style.columns)
@@ -253,12 +256,36 @@ def highlight_designated_cells(df_to_style, grille_dispo, column_mapping):
     # Récupère la partie "DESIGNATION" de la grille complète.
     designation_data = grille_dispo[column_mapping['dispo_designation']]
     
-    # Crée un masque booléen où la désignation est 1 (en remplissant les non-valeurs par 0).
-    mask = (designation_data.fillna(0) == 1)
+    # Récupère la partie "DISPONIBILITE" de la grille complète.
+    disponibilite_data = grille_dispo[column_mapping['dispo_disponibilite']]
     
-    # Applique le style à la matrice de style en utilisant le masque.
-    # On s'assure de ne le faire que pour les colonnes communes.
-    common_cols = style_matrix.columns.intersection(mask.columns)
-    style_matrix.loc[:, common_cols] = style_matrix.loc[:, common_cols].mask(mask[common_cols], 'background-color: #FFDDC1')
+    # Crée un masque booléen où la désignation est 1 (en remplissant les non-valeurs par 0).
+    mask_designated = (designation_data.fillna(0) == 1)
+    
+    # Crée des masques pour les disponibilités "OUI" et "NON" - colonne par colonne
+    mask_dispo_oui = pd.DataFrame(False, index=disponibilite_data.index, columns=disponibilite_data.columns)
+    mask_dispo_non = pd.DataFrame(False, index=disponibilite_data.index, columns=disponibilite_data.columns)
+    
+    for col in disponibilite_data.columns:
+        mask_dispo_oui[col] = disponibilite_data[col].fillna('').astype(str).str.upper() == 'OUI'
+        mask_dispo_non[col] = disponibilite_data[col].fillna('').astype(str).str.upper() == 'NON'
+    
+    # Applique les styles aux colonnes communes
+    common_cols = style_matrix.columns.intersection(disponibilite_data.columns)
+    
+    # Applique le fond vert pour les disponibilités "OUI"
+    style_matrix.loc[:, common_cols] = style_matrix.loc[:, common_cols].mask(
+        mask_dispo_oui[common_cols], 'background-color: #C8E6C9'  # Vert clair
+    )
+    
+    # Applique le fond rouge pour les disponibilités "NON"
+    style_matrix.loc[:, common_cols] = style_matrix.loc[:, common_cols].mask(
+        mask_dispo_non[common_cols], 'background-color: #FFCDD2'  # Rouge clair
+    )
+    
+    # Pour les arbitres désignés, on ajoute l'icône 🏈 au lieu du fond orange
+    # On modifie directement le DataFrame affiché pour ajouter l'icône
+    for col in common_cols:
+        df_to_style.loc[mask_designated[col], col] = '🏈'
     
     return style_matrix
