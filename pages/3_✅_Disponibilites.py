@@ -88,7 +88,31 @@ if not arbitres_df.empty:
             # Remplacer "OUI" et "NON" par des chaînes vides, garder "Non renseigné" pour les valeurs manquantes
             display_grille = grille_dispo[config.COLUMN_MAPPING['dispo_disponibilite']].fillna('Non renseigné')
             display_grille = display_grille.replace({'OUI': '', 'NON': ''})
-            ordered_columns = sorted(display_grille.columns, key=lambda x: datetime.strptime(x, '%d/%m/%Y'))
+            
+            # Réinitialiser l'index pour avoir les colonnes d'index comme colonnes normales
+            display_grille_reset = display_grille.reset_index()
+            
+            # Trier les colonnes de date
+            date_columns = [col for col in display_grille_reset.columns if col not in [
+                config.COLUMN_MAPPING['arbitres_nom'],
+                config.COLUMN_MAPPING['arbitres_prenom'], 
+                config.COLUMN_MAPPING['arbitres_categorie'],
+                'Club',
+                'Nbr matchs\nà arbitrer'
+            ]]
+            ordered_date_columns = sorted(date_columns, key=lambda x: datetime.strptime(x, '%d/%m/%Y'))
+            
+            # Réorganiser les colonnes : d'abord les colonnes fixes, puis les dates triées
+            final_columns = [
+                config.COLUMN_MAPPING['arbitres_nom'],
+                config.COLUMN_MAPPING['arbitres_prenom'], 
+                config.COLUMN_MAPPING['arbitres_categorie'],
+                'Club',
+                'Nbr matchs\nà arbitrer'
+            ] + ordered_date_columns
+            
+            display_grille_final = display_grille_reset[final_columns]
+            
             st.markdown("""                <style>
                     .stDataFrame {
                         width: 100%;
@@ -99,15 +123,28 @@ if not arbitres_df.empty:
                 </style>
             """, unsafe_allow_html=True)
             
+            # Configuration pour figer les 3 premières colonnes (Nom, Prénom, Catégorie)
+            column_config = {
+                config.COLUMN_MAPPING['arbitres_nom']: st.column_config.Column(width="small", pinned="left"),
+                config.COLUMN_MAPPING['arbitres_prenom']: st.column_config.Column(width="small", pinned="left"),
+                config.COLUMN_MAPPING['arbitres_categorie']: st.column_config.Column(width="small", pinned="left"),
+            }
+            
+            # Préparer grille_dispo avec le même index que display_grille_final pour la fonction de style
+            grille_dispo_for_style = grille_dispo.copy()
+            grille_dispo_for_style = grille_dispo_for_style.reset_index()
+            
             st.dataframe(
-                display_grille[ordered_columns].style.apply(
+                display_grille_final.style.apply(
                     highlight_designated_cells, 
-                    grille_dispo=grille_dispo, 
+                    grille_dispo=grille_dispo_for_style, 
                     column_mapping=config.COLUMN_MAPPING, 
                     axis=None
                 ),
-                height=600
-                # width=None a été retiré car il cause une erreur dans certaines versions de Streamlit
+                height=600,
+                column_config=column_config,
+                use_container_width=True,
+                hide_index=True  # Masquer l'index pour gagner de la place
             )
         else:
             st.info("Aucune disponibilité trouvée pour les filtres sélectionnés.")

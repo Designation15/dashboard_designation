@@ -270,8 +270,16 @@ def highlight_designated_cells(df_to_style, grille_dispo, column_mapping):
         mask_dispo_oui[col] = disponibilite_data[col].fillna('').astype(str).str.upper() == 'OUI'
         mask_dispo_non[col] = disponibilite_data[col].fillna('').astype(str).str.upper() == 'NON'
     
-    # Applique les styles aux colonnes communes
-    common_cols = style_matrix.columns.intersection(disponibilite_data.columns)
+    # Applique les styles aux colonnes communes (colonnes de date seulement)
+    date_columns = [col for col in df_to_style.columns if col not in [
+        column_mapping['arbitres_nom'],
+        column_mapping['arbitres_prenom'], 
+        column_mapping['arbitres_categorie'],
+        'Club',
+        'Nbr matchs\nà arbitrer'
+    ]]
+    
+    common_cols = style_matrix.columns.intersection(date_columns)
     
     # Applique le fond vert pour les disponibilités "OUI"
     style_matrix.loc[:, common_cols] = style_matrix.loc[:, common_cols].mask(
