@@ -2,6 +2,11 @@
 Fichier de configuration central pour l'application Streamlit.
 Ce fichier contient les constantes, les URLs, les mappings de colonnes,
 et les données statiques utilisées à travers l'application.
+DISPO = RS_OVALE-022
+RENCNTRES = RS_OVALE-024
+ARBITRES = RS_OVALE-052
+RENCONTRES_OVALE = RS_OVALE-023
+CLUBS = RS_OVALE-007
 """
 import pandas as pd
 
